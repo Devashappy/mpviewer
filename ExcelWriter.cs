@@ -98,6 +98,7 @@ namespace MPViewer
         {
             for (int i = 0; i < table.Columns.Count; i++)
             {
+                
                 m_contents.AppendLine("<ss:Column ss:Width=\"80\"/>");
             }
 

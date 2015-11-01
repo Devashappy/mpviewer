@@ -40,6 +40,7 @@
             this.buttonOK.Text = "OK";
             this.buttonOK.UseVisualStyleBackColor = true;
             this.buttonOK.Click += new System.EventHandler(this.buttonOK_Click);
+            this.buttonOK.Dock = System.Windows.Forms.DockStyle.Bottom;
             // 
             // MPSortableList
             // 
@@ -51,6 +52,7 @@
             this.MPSortableList.UseCompatibleStateImageBehavior = false;
             this.MPSortableList.View = System.Windows.Forms.View.Details;
             this.MPSortableList.SelectedIndexChanged += new System.EventHandler(this.MPSortableList_SelectedIndexChanged);
+            this.MPSortableList.Dock = System.Windows.Forms.DockStyle.Fill;
             // 
             // MultipleMPSelectionForm
             // 

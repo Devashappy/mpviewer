@@ -113,7 +113,7 @@ namespace MPViewer
         }
 
         private static void GenerateHTMLForMP(string[] args)
-        {
+        { /*
             try
             {
                 bool exportAlertGeneratingWorkflowsOnly = false;
@@ -131,11 +131,11 @@ namespace MPViewer
             catch (Exception exception)
             {
                 Console.WriteLine(exception.Message);
-            }
+            } */
         }
 
         private static void GenerateExcelForMP(string[] args)
-        {
+        { /*
             try
             {
                 bool exportAlertGeneratingWorkflowsOnly = false;
@@ -155,7 +155,7 @@ namespace MPViewer
             catch (Exception exception)
             {
                 Console.WriteLine(exception.Message);
-            }
+            } */
 
         }
     }

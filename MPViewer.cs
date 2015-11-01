@@ -16,13 +16,16 @@ using Microsoft.EnterpriseManagement.Administration;
 using Microsoft.EnterpriseManagement.Configuration.IO;
 using Microsoft.EnterpriseManagement.Packaging;
 using Microsoft.EnterpriseManagement.Common;
+using System.Linq;
+using System.Security;
 
 
 namespace MPViewer
 {
     public partial class MPViewer : Form
     {
-        ManagementPack          m_managementPack;
+        IDictionary<String,ManagementPack>   m_managementPack;
+        ManagementGroup emg;
         ManagementPackBundle    m_bundle;
         TabPage                 m_alertDescriptionTabPage;
         WebBrowser              m_alertDescriptionTextBox;
@@ -34,10 +37,20 @@ namespace MPViewer
         PictureBox              m_ImageResourcePictureBox;
         DataSet                 m_dataset;
         OpenFileDialog          m_openFileDialog;
-
+        SortableListView        mpElementListView;
+        string ManagementGroup;
         private ProgressDialog  m_progressDialog;
         internal delegate void MPLoadingProgressDelegate(int percentage, string status);
         internal event MPLoadingProgressDelegate MPLoadingProgress;
+        List<ManagementPack> MPList;
+        Dictionary<string,Stream> ResourceList;
+        enum MPMode
+        {
+            File = 1,
+            ManagementGroup = 2
+        }
+        MPMode Mode;
+        string MPPath;
 
 
 
@@ -313,12 +326,13 @@ p.lastInCell	{
 
             FormClosed += new FormClosedEventHandler(MPViewer_FormClosed);
             Shown += new EventHandler(MPViewer_Shown);
+            m_managementPack = new Dictionary<String, ManagementPack>();
         }
 
         //---------------------------------------------------------------------
         void MPViewer_Shown(object sender, EventArgs e)
         {
-            loadManagementPackToolStripMenuItem_Click(this, null); 
+          //  loadManagementPackToolStripMenuItem_Click(this, null); 
         }
 
         //---------------------------------------------------------------------
@@ -334,11 +348,56 @@ p.lastInCell	{
         private void unsealManagementPackToolStripMenuItem_Click(object sender, EventArgs e)
         {
             FolderBrowserDialog dlg = new FolderBrowserDialog();
-            dlg.Description = "Choose a folder where the unsealed/unpacked XML and resources will be dumped. In the case of an MPB, a subdirectory will be created.";
+            dlg.Description = "Choose a folder where the unsealed/unpacked XML and resources will be dumped.";
 
             if (dlg.ShowDialog() == DialogResult.OK)
             {
+                foreach (ManagementPack MP in m_managementPack.Values)
+                {
+                    ManagementPackXmlWriter mpWriter = new Microsoft.EnterpriseManagement.Configuration.IO.ManagementPackXmlWriter(dlg.SelectedPath);
+                    ManagementPackElementCollection<ManagementPackResource> resources = null;
+                    try
+                    {
+                        resources = MP.GetResources<ManagementPackResource>();
 
+                    }
+                    catch
+                    {
+
+                    }
+
+                    mpWriter.WriteManagementPack(MP);
+                    if (ResourceList != null && ResourceList.Keys.Count > 0)
+                    {
+
+
+                       
+
+                        foreach (string stream in ResourceList.Keys)
+                        {
+                            // buffer stuff to copy from one stream to another
+                            int length = 256;
+                            int bytesRead = 0;
+                            Byte[] buffer = new Byte[length];
+
+                            // write the required bytes
+                            using (FileStream fs = new FileStream(dlg.SelectedPath + '\\' + stream, FileMode.Create))
+                            {
+                                do
+                                {
+                                    bytesRead = ResourceList[stream].Read(buffer, 0, length);
+                                    fs.Write(buffer, 0, bytesRead);
+                                }
+                                while (bytesRead == length);
+
+                                fs.Close();
+                            }
+
+
+                        }
+                    }
+                }
+                return;
                 if (System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mpb", StringComparison.InvariantCultureIgnoreCase))
                 { 
                     // unpack the bundle. since many files might be there, let's create a folder
@@ -355,6 +414,29 @@ p.lastInCell	{
                         {
                             mpWriter.WriteManagementPack(mp);
                         }
+
+                        foreach (string stream in ResourceList.Keys)
+                        {
+                            // buffer stuff to copy from one stream to another
+                            int length = 256;
+                            int bytesRead = 0;
+                            Byte[] buffer = new Byte[length];
+
+                            // write the required bytes
+                            using (FileStream fs = new FileStream(stream, FileMode.Create))
+                            {
+                                do
+                                {
+                                    bytesRead = ResourceList[stream].Read(buffer, 0, length);
+                                    fs.Write(buffer, 0, bytesRead);
+                                }
+                                while (bytesRead == length);
+
+                                fs.Close();
+                            }
+                        }
+
+                        
 
 
                         // get a dictionary of ALL the streams from ALL the MPs and dump the streams for each MP
@@ -418,112 +500,30 @@ p.lastInCell	{
                 }
                 else if (System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mp", StringComparison.InvariantCultureIgnoreCase))
                 {
+                    
                     // no need to reopen the file, since we have the MP already
                     ManagementPackXmlWriter mpWriter = new Microsoft.EnterpriseManagement.Configuration.IO.ManagementPackXmlWriter(dlg.SelectedPath);
-                    mpWriter.WriteManagementPack(m_managementPack);
+                    foreach (ManagementPack MP in m_managementPack.Values)
+                    {
+                        
+                        mpWriter.WriteManagementPack(MP);
+                    }
+                    
+                    
 
                     MessageBox.Show("Unsealing done!");
+                     
                 }
             }
             return;
         }
 
-        //---------------------------------------------------------------------
-        private void loadManagementPackToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            m_openFileDialog = new OpenFileDialog();
-
-            m_openFileDialog.AddExtension = true;
-            m_openFileDialog.CheckPathExists = true;
-            m_openFileDialog.DefaultExt = "mp";
-            m_openFileDialog.Filter = "Sealed MP files (*.mp)|*.mp|Sealed MP bundles (*.mpb)|*.mpb|Unsealed MP files (*.xml)|*.xml";
-
-            m_openFileDialog.InitialDirectory = (string)Application.UserAppDataRegistry.GetValue("MPFolder", (object)"C:\\");
-
-            if (m_openFileDialog.ShowDialog() != DialogResult.OK)
-            {
-                return;
-            }
-
-            Cursor = Cursors.WaitCursor;
-
-            ManagementPackFileStore store = Utilities.GetManagementPackStoreFromPath(m_openFileDialog.FileName);
-
-
-            if (System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mpb", StringComparison.InvariantCultureIgnoreCase))
-            {
-                ManagementPackBundleReader reader = ManagementPackBundleFactory.CreateBundleReader();
-                m_bundle = reader.Read(m_openFileDialog.FileName, store);
-
-                // 1 at the time is ok
-                if (m_bundle.ManagementPacks.Count == 1)
-                {
-                    m_managementPack = m_bundle.ManagementPacks[0];
-                }
-                else
-                {
-                    // multiple MPs contained in this MPB! - can only open one at the time! Need to ask the user which one.
-                    MultipleMPSelectionForm MPListForm = new MultipleMPSelectionForm(m_bundle.ManagementPacks);
-                    MPListForm.ShowDialog();
-
-                    //selected in the form
-                    m_managementPack = MPListForm.ChosenMP;
-                }
-            }
-            else // we are dealing with an MP or XML - the old stuff works as it did for 2007
-            {
-                m_managementPack = new ManagementPack(m_openFileDialog.FileName, store);
-            }
-
-
-            ClearViews();
-
-            PopulateObjectTypeTree();
-
-
-            Application.UserAppDataRegistry.SetValue("MPFolder",
-                                                        Path.GetDirectoryName(m_openFileDialog.FileName));
-
-            if (m_managementPack.KeyToken != null)
-            {
-                Text = string.Format("Management Pack Viewer 2012 - {0} {1} {2}",
-                                        Utilities.GetBestManagementPackName(m_managementPack),
-                                        m_managementPack.Version.ToString(),
-                                        m_managementPack.KeyToken.ToString());
-            }
-            else
-            {     
-                //TODO - Unsealed don't have keytoken!
-                Text = string.Format("Management Pack Viewer 2012 - {0} {1} Unsealed",
-                                        Utilities.GetBestManagementPackName(m_managementPack),
-                                        m_managementPack.Version.ToString());
-            }
-
-
-            //loading dataset is memory expensive and can take time... so moved to a worker thread
-            this.m_progressDialog = new ProgressDialog();
-            this.m_progressDialog.Show(this);
-            this.backgroundWorker.RunWorkerAsync();
-
-
-
-            Cursor = Cursors.Default;
-            
-            // now that an MP is loaded, enable the menus
-            saveToHTMLToolStripMenuItem.Enabled = true;
-            saveToExcelToolStripMenuItem.Enabled = true;
-
-            //this might make sense or not, if we have loaded XML...
-            if (System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mpb", StringComparison.InvariantCultureIgnoreCase) ||
-                System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mp", StringComparison.InvariantCultureIgnoreCase))
-            {
-                unsealManagementPackToolStripMenuItem.Enabled = true;
-            }
-        }
+        
 
         //---------------------------------------------------------------------
         private void PopulateObjectTypeTree()
         {
+            objectTypeTree.Nodes.Add("Management Packs");
             objectTypeTree.Nodes.Add("Monitors - Aggregate");
             objectTypeTree.Nodes.Add("Monitors - Unit");
             objectTypeTree.Nodes.Add("Monitors - Dependency");
@@ -568,35 +568,42 @@ p.lastInCell	{
         private void objectTypeTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
             Cursor = Cursors.WaitCursor;
-
+            elementActionsToolStripMenuItem.Enabled = false;
             ClearDetailsViews();
 
             mpElementListView.BeginUpdate();
-
+            ClearDetailsViews();
+            PopulateListView(e.Node.Text);
             
             if (e.Node.Text == "Monitors - Aggregate" || e.Node.Text == "Monitors - Unit" || e.Node.Text == "Monitors - Dependency")
             {
-                ClearDetailsViews();
-                PopulateListView(e.Node.Text);
+               
                 CreateAdditionalAlertTab();
+                elementActionsToolStripMenuItem.Enabled = true;
+                elementActionsToolStripMenuItem.Enabled = true;
             }
             else if (e.Node.Text == "Resources")
             {
-                ClearDetailsViews();
-                PopulateListView(e.Node.Text);
+               
                 CreateAdditionalScriptResourceTab();
                 CreateAdditionalImageResourceTab();
+           
             }
             else if (e.Node.Text == "Rules")
             {
-                ClearDetailsViews();
-                PopulateListView(e.Node.Text);
+                
                 CreateAdditionalQueryResourceTab();
+                elementActionsToolStripMenuItem.Enabled = true;
             }
-            else
+            else if(e.Node.Text == "Overrides")
             {
-                ClearDetailsViews();
-                PopulateListView(e.Node.Text);
+
+              elementActionsToolStripMenuItem.Enabled = true;
+              disableToolStripMenuItem.Enabled = false;
+              enableToolStripMenuItem.Enabled = false;
+            }
+            else if(e.Node.Text == "Discoveries"){
+                elementActionsToolStripMenuItem.Enabled = true;
             }
 
             mpElementListView.EndUpdate();
@@ -626,6 +633,7 @@ p.lastInCell	{
                 if (column.ColumnName != "ObjectRef")
                 {
                     mpElementListView.Columns.Add(column.ColumnName);
+
                 }
             }
 
@@ -634,13 +642,18 @@ p.lastInCell	{
                 ListViewItem item = new ListViewItem();
 
                 item.Text = row[0].ToString();
-
-                for (int i = 1; i < table.Columns.Count - 1; i++)
+                
+                
+                foreach(ColumnHeader column in mpElementListView.Columns)
                 {
-                    string value = row[i].ToString();
-                                                     
-                    item.SubItems.Add(value);
+                    item.SubItems.Add("");     
                 }
+                foreach (ColumnHeader column in mpElementListView.Columns)
+                {
+                    item.SubItems[column.DisplayIndex] = new ListViewItem.ListViewSubItem(item, row[column.Text].ToString());
+                }
+
+               
 
                 PopulateObjectReference(item, row["ObjectRef"].ToString(), contentsType);
 
@@ -650,79 +663,86 @@ p.lastInCell	{
 
         //---------------------------------------------------------------------
         private void PopulateObjectReference(
+            
             ListViewItem        item,
             string              objectName,
             string              objectType
             )
         {
+            string[] info = objectName.Split(';');
             if (objectType == "Monitors - Aggregate" || objectType == "Monitors - Unit" || objectType == "Monitors - Dependency")
             {
-                item.Tag = m_managementPack.GetMonitor(objectName);
+                item.Tag = m_managementPack[info[0]].GetMonitor(info[1]);
             }
             else if (objectType == "Rules")
             {
-                item.Tag = m_managementPack.GetRule(objectName);
+                item.Tag = m_managementPack[info[0]].GetRule(info[1]);
             }
             else if (objectType == "Views")
             {
-                item.Tag = m_managementPack.GetView(objectName);
+                item.Tag = m_managementPack[info[0]].GetView(info[1]);
             }
             else if (objectType == "Discoveries")
             {
-                item.Tag = m_managementPack.GetDiscovery(objectName);
+                item.Tag = m_managementPack[info[0]].GetDiscovery(info[1]);
             }
             else if (objectType == "Reports")
             {
-                item.Tag = m_managementPack.GetReport(objectName);
+                item.Tag = m_managementPack[info[0]].GetReport(info[1]);
             }
             else if (objectType == "Classes")
             {
-                item.Tag = m_managementPack.GetClass(objectName);
+                item.Tag = m_managementPack[info[0]].GetClass(info[1]);
             }
             else if (objectType == "Relationships")
             {
-                item.Tag = m_managementPack.GetRelationship(objectName);
+                item.Tag = m_managementPack[info[0]].GetRelationship(info[1]);
             }
             else if (objectType == "Tasks")
             {
-                item.Tag = m_managementPack.GetTask(objectName);
+                item.Tag = m_managementPack[info[0]].GetTask(info[1]);
             }
             else if (objectType == "Console Tasks")
             {
-                item.Tag = m_managementPack.GetConsoleTask(objectName);
+                item.Tag = m_managementPack[info[0]].GetConsoleTask(info[1]);
             }
             else if (objectType == "Linked Reports")
             {
-                item.Tag = m_managementPack.GetLinkedReport(objectName);
+                item.Tag = m_managementPack[info[0]].GetLinkedReport(info[1]);
             }
             else if (objectType == "Dependencies")
             {
-                item.Tag = m_managementPack.References[objectName];
+                item.Tag = m_managementPack[info[0]].References[info[1]];
             }
             else if (objectType == "Recoveries")
             {
-                item.Tag = m_managementPack.GetRecovery(objectName);
+                item.Tag = m_managementPack[info[0]].GetRecovery(info[1]);
             }
             else if (objectType == "Diagnostics")
             {
-                item.Tag = m_managementPack.GetDiagnostic(objectName);
+                item.Tag = m_managementPack[info[0]].GetDiagnostic(info[1]);
             }
             else if (objectType == "Overrides")
             {
-                item.Tag = m_managementPack.GetOverride(objectName);
+                item.Tag = m_managementPack[info[0]].GetOverride(info[1]);
             }
             else if (objectType == "Groups")
             {
-                item.Tag = m_managementPack.GetClass(objectName);
+                item.Tag = m_managementPack[info[0]].GetClass(info[1]);
             }
             else if (objectType == "Resources")
             {
-                item.Tag = m_managementPack.GetResource<ManagementPackResource>(objectName);
+                item.Tag = m_managementPack[info[0]].GetResource<ManagementPackResource>(info[1]);
             }
             else if (objectType == "Dashboards and Widgets")
             {
-                item.Tag = m_managementPack.GetComponentType(objectName);
+                item.Tag = m_managementPack[info[0]].GetComponentType(info[1]);
             }
+            else if (objectType == "Management Packs")
+            {
+                item.Tag = m_managementPack[info[0]];
+            }
+             
         }
 
         //---------------------------------------------------------------------
@@ -825,22 +845,27 @@ p.lastInCell	{
             {
                 return;
             }
+            if (mpElementListView.SelectedItems[0].Tag is ManagementPack)
+            {
+                return;
+            }
+           
+                ManagementPackElement element;
 
-            ManagementPackElement element;
+                element = (ManagementPackElement)mpElementListView.SelectedItems[0].Tag;
+
+
+                DisplayRawXml(element);
+
+                DisplayKnowledgeArticle(element);
+
+
+                //Additional Tabs
+                DisplayAlertDescriptionIfApplicable(element);
+                DisplayAdvisorQueryIfApplicable(element);
+                DisplayScriptIfApplicable(element);
+                DisplayImageIfApplicable(element);
             
-            element = (ManagementPackElement)mpElementListView.SelectedItems[0].Tag;
-
-
-            DisplayRawXml(element);
-
-            DisplayKnowledgeArticle(element);
-
-
-            //Additional Tabs
-            DisplayAlertDescriptionIfApplicable(element);
-            DisplayAdvisorQueryIfApplicable(element);
-            DisplayScriptIfApplicable(element);
-            DisplayImageIfApplicable(element);
 
         }
 
@@ -848,7 +873,7 @@ p.lastInCell	{
 
         //---------------------------------------------------------------------
         private void DisplayImageIfApplicable(ManagementPackElement element)
-        {
+        { /*
             if (!(element is ManagementPackResource))
             {
                 return;
@@ -877,7 +902,7 @@ p.lastInCell	{
                 {
                     m_ImageResourcePictureBox.Visible = false;
                 }
-            }
+            } */
         }
 
 
@@ -906,7 +931,7 @@ p.lastInCell	{
         //---------------------------------------------------------------------
         private void DisplayScriptIfApplicable(ManagementPackElement element)
         {
-            if (!(element is ManagementPackResource))
+          /*  if (!(element is ManagementPackResource))
             {
                 return;
             }
@@ -943,7 +968,7 @@ p.lastInCell	{
 
                     m_ScriptResourceTextBox.Text = ScriptBody;
                 }
-            }
+            } */
         }
 
 
@@ -964,22 +989,34 @@ p.lastInCell	{
             
             if (monitor.AlertSettings != null && monitor.AlertSettings.AlertMessage != null)
             {
-                string alertDescription;
-
-                alertDescription = m_managementPack.GetStringResource(monitor.AlertSettings.AlertMessage.Name).Description;
-
-                if (alertDescription == null)
+                string alertDescription = null;
+                foreach (ManagementPack mp in m_managementPack.Values)
                 {
-                    return;
-                }
+                    if (mp.Name == monitor.GetManagementPack().Name)
+                    {
+                        try
+                        {
+                            alertDescription = mp.GetStringResource(monitor.AlertSettings.AlertMessage.Name).Description;
+                        }
+                        catch { }
 
-                if (alertDescription.IndexOf("\r\n") == 0)
-                {
-                    alertDescription = alertDescription.Remove(0, 2);
-                    alertDescription = alertDescription.TrimStart(new char[] { ' ' });
-                }
 
-                m_alertDescriptionTextBox.DocumentText = string.Format(@"<HTML><BODY>{0}</BODY></HTML>",alertDescription);
+
+
+                        if (alertDescription == null)
+                        {
+                            return;
+                        }
+
+                        if (alertDescription.IndexOf("\r\n") == 0)
+                        {
+                            alertDescription = alertDescription.Remove(0, 2);
+                            alertDescription = alertDescription.TrimStart(new char[] { ' ' });
+                        }
+
+                        m_alertDescriptionTextBox.DocumentText = string.Format(@"<HTML><BODY>{0}</BODY></HTML>", alertDescription);
+                    }
+                }
             }
         }
 
@@ -1017,9 +1054,16 @@ p.lastInCell	{
         //---------------------------------------------------------------------
         private void DisplayKnowledgeArticle(ManagementPackElement element)
         {
+            ManagementPackKnowledgeArticle article = null;
             knowledgeBrowser.DocumentText = string.Empty;
-
-            ManagementPackKnowledgeArticle article = element.GetKnowledgeArticle("ENU");
+            try
+            {
+                article = element.GetKnowledgeArticle("ENU");
+            }
+            catch
+            {
+                
+            }
 
             if (article == null)
             {
@@ -1128,7 +1172,7 @@ p.lastInCell	{
             MPLoadingProgress += new MPViewer.MPLoadingProgressDelegate(MPViewer_MPLoadingProgress);
 
             //load the dataset in this thread
-            m_dataset = new DatasetCreator(m_managementPack, MPLoadingProgress).Dataset;
+            m_dataset = new DatasetCreator(m_managementPack.Values.ToList<ManagementPack>(), MPLoadingProgress).Dataset;
         }
 
 
@@ -1151,7 +1195,7 @@ p.lastInCell	{
 
             if (dlg.ShowDialog() == DialogResult.OK)
             {
-                ReportGenerator reportGenerator = new ReportGenerator(m_dataset,m_managementPack);
+                ReportGenerator reportGenerator = new ReportGenerator(m_dataset,m_managementPack.Values.ToList<ManagementPack>());
 
                 reportGenerator.GenerateHTMLReport(dlg.FileName,false);
             }
@@ -1186,6 +1230,264 @@ p.lastInCell	{
 
             writer.SaveToFile(filename);
         }
+
+        private void fileToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            m_managementPack.Clear();
+            m_openFileDialog = new OpenFileDialog();
+            MPList = new List<ManagementPack>();
+            ResourceList = new Dictionary<string, Stream>();
+            m_openFileDialog.AddExtension = true;
+            m_openFileDialog.CheckPathExists = true;
+            m_openFileDialog.Multiselect = true;
+            m_openFileDialog.DefaultExt = "mp";
+            m_openFileDialog.Filter = "MultiSelect (*.mp;*.xml;*.mpb)|*.xml;*.mp;*.mpb|Sealed MP files (*.mp)|*.mp|Sealed MP bundles (*.mpb)|*.mpb|Unsealed MP files (*.xml)|*.xml";
+
+            m_openFileDialog.InitialDirectory = (string)Application.UserAppDataRegistry.GetValue("MPFolder", (object)"C:\\");
+
+            if (m_openFileDialog.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            Cursor = Cursors.WaitCursor;
+
+            ManagementPackFileStore store = Utilities.GetManagementPackStoreFromPath(m_openFileDialog.FileName);
+
+
+          
+           
+                
+                foreach (string FileName in m_openFileDialog.FileNames)
+                {
+                      if (System.IO.Path.GetExtension(FileName).Equals(".mpb", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ManagementPackBundleReader reader = ManagementPackBundleFactory.CreateBundleReader();
+                try { 
+                m_bundle = reader.Read(FileName, store);
+                foreach (ManagementPack MP in m_bundle.ManagementPacks)
+                {
+                    m_managementPack.Add(MP.Name, MP);
+                    IDictionary<string, Stream> streams = m_bundle.GetStreams(MP);
+                    foreach (ManagementPackResource resource in MP.GetResources<ManagementPackResource>())
+                    {
+                        if (!resource.HasNullStream && streams[resource.Name] != null)
+                        {
+                            ResourceList.Add(resource.FileName, streams[resource.Name]);
+
+                        }
+
+                    }
+                }
+                   
+                } catch {}
+                }
+                
+        
+              
+             else {
+                try
+                {
+                    ManagementPack MP = new ManagementPack(FileName, store);
+                    m_managementPack.Add(MP.Name, MP);
+                }
+                catch { }
+
+                }
+                
+        }
+            Mode = MPMode.File;
+            
+
+            MPPath = Path.GetDirectoryName(m_openFileDialog.FileNames[0]);
+           
+            
+        ProcessManagementPacks();
         
     }
+        private void ProcessManagementPacks()
+        {
+            
+            ClearViews();
+
+            PopulateObjectTypeTree();
+
+
+          //  Application.UserAppDataRegistry.SetValue("MPFolder",Path.GetDirectoryName(m_openFileDialog.FileName));
+
+            /* if (m_managementPack.KeyToken != null)
+             {
+                 Text = string.Format("Management Pack Viewer 2012 - {0} {1} {2}",
+                                         Utilities.GetBestManagementPackName(m_managementPack),
+                                         m_managementPack.Version.ToString(),
+                                         m_managementPack.KeyToken.ToString());
+             }
+             else
+             {     
+                 //TODO - Unsealed don't have keytoken!
+                 Text = string.Format("Management Pack Viewer 2012 - {0} {1} Unsealed",
+                                         Utilities.GetBestManagementPackName(m_managementPack),
+                                         m_managementPack.Version.ToString());
+             } */
+
+
+            //loading dataset is memory expensive and can take time... so moved to a worker thread
+            this.m_progressDialog = new ProgressDialog();
+            this.backgroundWorker.RunWorkerAsync();
+            this.m_progressDialog.ShowDialog(this);
+            
+
+
+
+            Cursor = Cursors.Default;
+
+            // now that an MP is loaded, enable the menus
+            saveToHTMLToolStripMenuItem.Enabled = true;
+            saveToExcelToolStripMenuItem.Enabled = true;
+
+            //this might make sense or not, if we have loaded XML...
+          /*  if (System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mpb", StringComparison.InvariantCultureIgnoreCase) ||
+                System.IO.Path.GetExtension(m_openFileDialog.FileName).Equals(".mp", StringComparison.InvariantCultureIgnoreCase))
+            {
+                unsealManagementPackToolStripMenuItem.Enabled = true;
+            } */
+            unsealManagementPackToolStripMenuItem.Enabled = true;
+        }
+
+        private void managementGroupToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            m_managementPack.Clear();
+            Connection Connection = new Connection();
+            Connection.ShowDialog();
+            if (Connection.DialogResult != DialogResult.OK)
+            {
+                return;
+            }
+            this.ManagementGroup = Connection.Server;
+            try
+            {
+                if (Connection.User != "")
+                {
+                    ManagementGroupConnectionSettings emgs = new ManagementGroupConnectionSettings(Connection.Server);
+                    string[] user = Connection.User.Split('\\');
+                    emgs.Domain = user[0];
+                    emgs.UserName = user[1];
+                    SecureString password = new SecureString();
+                    foreach (char c in Connection.Password)
+                    {
+                        password.AppendChar(c);
+                    }
+                    emgs.Password = password;
+                    emg = new ManagementGroup(emgs);
+
+                }
+                else
+                {
+                    emg = new ManagementGroup(Connection.Server);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return;
+            }
+           
+            BackgroundWorker MGConnector = new BackgroundWorker();
+
+            MGConnector.DoWork += MGConnector_DoWork;
+            MGConnector.RunWorkerCompleted += MGConnector_RunWorkerCompleted;
+            m_progressDialog = new ProgressDialog();
+            MGConnector.RunWorkerAsync(MPLoadingProgress);
+            
+            m_progressDialog.ShowDialog();
+            MultipleMPSelectionForm form = new MultipleMPSelectionForm(MPList);
+            form.ShowDialog();
+            if (form.ChosenMP.Count > 0)
+            {
+                foreach (ManagementPack item in form.ChosenMP)
+                {
+                    this.m_managementPack.Add(item.Name, item);
+                }
+                Mode = MPMode.ManagementGroup;
+                ProcessManagementPacks();
+            }
+        }
+
+        void MGConnector_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            m_progressDialog.Close();
+        }
+
+        void MGConnector_DoWork(object sender, DoWorkEventArgs e)
+        {
+            
+           
+            MPList = emg.GetManagementPacks().ToList<ManagementPack>();
+           
+            
+            
+        }
+
+        private void disableToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            
+            
+        }
+
+        private void reloadToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+            if(Mode == MPMode.ManagementGroup){
+                if (emg != null && emg.IsConnected)
+                {
+
+                    foreach (ManagementPack MP in m_managementPack.Values.ToList<ManagementPack>())
+                    {
+                        ManagementPack item = null;
+                        try
+                        {
+                            item = emg.GetManagementPack(MP.Id);
+                        }
+                        catch { }
+
+                        if (item != null)
+                        {
+                            m_managementPack[MP.Name] = item;
+                        }
+                        else
+                        {
+                            m_managementPack.Remove(MP.Name);
+                        }
+                    }
+                }
+                else { MessageBox.Show("Management Group disconnected, reload not possible"); return; }
+            }
+                if(Mode == MPMode.File){
+                     foreach(ManagementPack MP in m_managementPack.Values.ToList<ManagementPack>()){
+                    ManagementPack item = null;
+                    string ext = "";
+                    if(MP.Sealed == true){
+                        ext = ".mp";
+                    } else {
+                        ext = ".xml";
+                    }
+                    try{
+                        item = new ManagementPack(MPPath + '\\' + MP.Name + ext);
+                    }
+                    catch{}
+
+                    if(item != null){
+                        m_managementPack[MP.Name] = item;
+                    } else {
+                        m_managementPack.Remove(MP.Name);
+                    }
+                    
+                }
+                ProcessManagementPacks();
+                    
+
+            }
+        }
+
+}
 }

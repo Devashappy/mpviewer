@@ -14,7 +14,7 @@ namespace MPViewer
     class DatasetCreator
     {
         DataSet                 m_dataset;
-        ManagementPack          m_managementPack;
+        IList<ManagementPack>   m_managementPack;
         Delegate                m_mpLoadingProcess;
 
         internal delegate void StubDelegate();
@@ -22,12 +22,12 @@ namespace MPViewer
         //---------------------------------------------------------------------
         // this overload is only used by the HTML batch export, which is horribly implemented anyways...
         internal DatasetCreator(
-            ManagementPack managementPack
+            IList<ManagementPack> managementPack
             )
         {
             m_dataset = new DataSet();
             m_managementPack = managementPack;
-
+            CreateManagementPackTable();
             CreateUnitMonitorsTable();
             CreateDependencyMonitorsTable();
             CreateAggregateMonitorsTable();
@@ -44,23 +44,36 @@ namespace MPViewer
             CreateConsoleTasksTable();
             CreateResourcesTable();
             CreateDashboardsTable();
-            CreateGenericTable(m_managementPack.GetTasks(), "Tasks", true, true);
-            CreateGenericTable(m_managementPack.GetLinkedReports(), "Linked Reports", false, true);
-            CreateGenericTable(m_managementPack.GetReports(), "Reports", false, true);
+            IList<ManagementPackElementCollection<ManagementPackTask>> Tasks = new List<ManagementPackElementCollection<ManagementPackTask>>();
+            IList<ManagementPackElementCollection<ManagementPackLinkedReport>> LinkedReports = new List<ManagementPackElementCollection<ManagementPackLinkedReport>>();
+            IList<ManagementPackElementCollection<ManagementPackReport>> Reports = new List<ManagementPackElementCollection<ManagementPackReport>>();
+
+        
+
+            foreach (ManagementPack MP in m_managementPack)
+            {
+                Tasks.Add(MP.GetTasks());
+                LinkedReports.Add(MP.GetLinkedReports());
+                Reports.Add(MP.GetReports());
+            }
+
+            CreateGenericTable(Tasks, "Tasks", true, true);
+            CreateGenericTable(LinkedReports, "Linked Reports", false, true);
+            CreateGenericTable(Reports, "Reports", false, true);
         }
         
 
 
         //this overload is the one used by the UI
         internal DatasetCreator(
-            ManagementPack managementPack, Delegate MPLoadingProcess
-            )
+            IList<ManagementPack> managementPack, Delegate MPLoadingProcess)
+            
         {
             m_dataset           = new DataSet();            
             m_managementPack    = managementPack;
             m_mpLoadingProcess  = MPLoadingProcess;
-
-
+            m_mpLoadingProcess.DynamicInvoke(0, "Loading Management Packs");
+            CreateManagementPackTable();
             m_mpLoadingProcess.DynamicInvoke(5, "Loading Unit Monitors");
             CreateUnitMonitorsTable();
 
@@ -108,15 +121,25 @@ namespace MPViewer
             
             m_mpLoadingProcess.DynamicInvoke(80, "Loading Dashboards");
             CreateDashboardsTable();
-            
+
+            IList<ManagementPackElementCollection<ManagementPackTask>> Tasks = new List<ManagementPackElementCollection<ManagementPackTask>>();
+            IList<ManagementPackElementCollection<ManagementPackLinkedReport>> LinkedReports = new List<ManagementPackElementCollection<ManagementPackLinkedReport>>();
+            IList<ManagementPackElementCollection<ManagementPackReport>> Reports = new List<ManagementPackElementCollection<ManagementPackReport>>();
+
+
+
+            foreach (ManagementPack MP in m_managementPack)
+            {
+                Tasks.Add(MP.GetTasks());
+                LinkedReports.Add(MP.GetLinkedReports());
+                Reports.Add(MP.GetReports());
+            }
             m_mpLoadingProcess.DynamicInvoke(85, "Loading Agent Tasks");
-            CreateGenericTable(m_managementPack.GetTasks(), "Tasks", true, true);
-            
+            CreateGenericTable(Tasks, "Tasks", true, true);
             m_mpLoadingProcess.DynamicInvoke(90, "Loading Linked Reports");
-            CreateGenericTable(m_managementPack.GetLinkedReports(), "Linked Reports", false, true);
-            
+            CreateGenericTable(LinkedReports, "Linked Reports", false, true);
             m_mpLoadingProcess.DynamicInvoke(95, "Loading Reports");
-            CreateGenericTable(m_managementPack.GetReports(), "Reports", false, true);
+            CreateGenericTable(Reports, "Reports", false, true);
             
             m_mpLoadingProcess.DynamicInvoke(100, "Done!");
         }
@@ -141,24 +164,58 @@ namespace MPViewer
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
+            {
+                foreach (ManagementPackMonitor monitor in MP.GetMonitors())
+                {
+                    DataRow row = table.NewRow();
 
-            foreach (ManagementPackMonitor monitor in m_managementPack.GetMonitors())
+                    if (!(monitor is ManagementPackAggregateMonitor))
+                    {
+                        continue;
+                    }
+
+                    ManagementPackAggregateMonitor aggregateMonitor = (ManagementPackAggregateMonitor)monitor;
+
+                    PopulateGenericMonitorProperties(monitor, row);
+
+                    row["Algorithm"] = ((ManagementPackAggregateMonitor)monitor).Algorithm.ToString();
+
+                    table.Rows.Add(row);
+                }
+            }
+        }
+        //---------------------------------------------------------------------
+        private void CreateManagementPackTable()
+        {
+            DataTable table = new DataTable("Management Packs");
+            m_dataset.Tables.Add(table);
+            table.Columns.Add("Name");
+            table.Columns.Add("Display Name");
+            table.Columns.Add("Description");
+            table.Columns.Add("Version");
+            table.Columns.Add("Sealed");
+            table.Columns.Add("Token");
+            table.Columns.Add("ObjectRef");
+            foreach (ManagementPack mp in m_managementPack)
             {
                 DataRow row = table.NewRow();
-
-                if (!(monitor is ManagementPackAggregateMonitor))
-                {
-                    continue;
-                }
-
-                ManagementPackAggregateMonitor aggregateMonitor = (ManagementPackAggregateMonitor)monitor;
-
-                PopulateGenericMonitorProperties(monitor, row);
-
-                row["Algorithm"] = ((ManagementPackAggregateMonitor)monitor).Algorithm.ToString();                             
-
+                row["Name"] = mp.Name;
+                row["Display Name"] = mp.DisplayName;
+                row["Description"] = mp.Description;
+                row["Version"] = mp.Version.ToString();
+                row["Sealed"] = mp.Sealed;
+                row["Token"] = mp.KeyToken;
+                row["ObjectRef"] = mp.Name + ';' + mp.Name;
                 table.Rows.Add(row);
             }
+
+
+
+
+
+
         }
 
         //---------------------------------------------------------------------
@@ -188,8 +245,9 @@ namespace MPViewer
 
             row["Remotable"]        = monitor.Remotable;
             row["Description"]      = monitor.Description;
-            row["ObjectRef"]        = monitor.Name;
+            row["ObjectRef"]        = monitor.GetManagementPack().Name + ';' + monitor.Name;
             row["Accessibility"]    = monitor.Accessibility.ToString();
+            row["Management Pack"] = monitor.GetManagementPack().Name;
         }
 
         //---------------------------------------------------------------------
@@ -215,24 +273,27 @@ namespace MPViewer
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackMonitor monitor in m_managementPack.GetMonitors())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
-
-                if (!(monitor is ManagementPackDependencyMonitor))
+                foreach (ManagementPackMonitor monitor in MP.GetMonitors())
                 {
-                    continue;
+                    DataRow row = table.NewRow();
+
+                    if (!(monitor is ManagementPackDependencyMonitor))
+                    {
+                        continue;
+                    }
+
+                    PopulateGenericMonitorProperties(monitor, row);
+
+                    row["Algorithm"] = ((ManagementPackDependencyMonitor)monitor).Algorithm.ToString();
+                    row["Algorithm Parameter"] = ((ManagementPackDependencyMonitor)monitor).AlgorithmParameter;
+                    row["Source Monitor"] = AttempToResolveName(((ManagementPackDependencyMonitor)monitor).MemberMonitor);
+                    row["Relationship"] = AttempToResolveName(((ManagementPackDependencyMonitor)monitor).RelationshipType);
+
+                    table.Rows.Add(row);
                 }
-
-                PopulateGenericMonitorProperties(monitor, row);
-
-                row["Algorithm"]            = ((ManagementPackDependencyMonitor)monitor).Algorithm.ToString();
-                row["Algorithm Parameter"]  = ((ManagementPackDependencyMonitor)monitor).AlgorithmParameter;
-                row["Source Monitor"]       = AttempToResolveName(((ManagementPackDependencyMonitor)monitor).MemberMonitor);
-                row["Relationship"]         = AttempToResolveName(((ManagementPackDependencyMonitor)monitor).RelationshipType);
-
-                table.Rows.Add(row);
             }
         }
 
@@ -251,21 +312,25 @@ namespace MPViewer
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackConsoleTask task in m_managementPack.GetConsoleTasks())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackConsoleTask task in MP.GetConsoleTasks())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]             = Common.Utilities.GetBestMPElementName(task);
-                row["Target"]           = AttempToResolveName(task.Target);
-                row["Accessibility"]    = task.Accessibility;
-                row["Application"]      = task.Application;
-                row["WorkingDirectory"] = task.WorkingDirectory;
-                row["Require Output"]   = task.RequireOutput;
-                row["Description"]      = task.Description;
-                row["ObjectRef"]        = task.Name;
+                    row["Name"] = Common.Utilities.GetBestMPElementName(task);
+                    row["Target"] = AttempToResolveName(task.Target);
+                    row["Accessibility"] = task.Accessibility;
+                    row["Application"] = task.Application;
+                    row["WorkingDirectory"] = task.WorkingDirectory;
+                    row["Require Output"] = task.RequireOutput;
+                    row["Description"] = task.Description;
+                    row["ObjectRef"] = task.GetManagementPack().Name + ';' + task.Name;
+                    row["Management Pack"] = task.GetManagementPack().Name;
 
-                table.Rows.Add(row);
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -281,25 +346,28 @@ namespace MPViewer
             table.Columns.Add("FileName", Type.GetType("System.String"));
             table.Columns.Add("ResourceType", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackResource resource in m_managementPack.GetResources<ManagementPackResource>())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                ManagementPackAssemblyResource assemblyResource = resource as ManagementPackAssemblyResource;
-                if (assemblyResource != null &&
-                    assemblyResource.HasNullStream)
+                foreach (ManagementPackResource resource in MP.GetResources<ManagementPackResource>())
                 {
-                    continue;
+                    ManagementPackAssemblyResource assemblyResource = resource as ManagementPackAssemblyResource;
+                    if (assemblyResource != null &&
+                        assemblyResource.HasNullStream)
+                    {
+                        continue;
+                    }
+
+                    DataRow row = table.NewRow();
+
+                    row["Name"] = resource.Name;
+                    row["FileName"] = resource.FileName;
+                    row["ResourceType"] = resource.XmlTag;
+
+                    row["ObjectRef"] = resource.GetManagementPack().Name + ';' + resource.Name;
+                    row["Management Pack"] = resource.GetManagementPack().Name;
+                    table.Rows.Add(row);
                 }
-          
-                DataRow row = table.NewRow();
-
-                row["Name"] = resource.Name;
-                row["FileName"] = resource.FileName;
-                row["ResourceType"] = resource.XmlTag;
-
-                row["ObjectRef"] = resource.Name;
-
-                table.Rows.Add(row);     
             }
         }
 
@@ -315,19 +383,22 @@ namespace MPViewer
             //table.Columns.Add("Target", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackComponentType componentType in m_managementPack.GetComponentTypes())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
+                foreach (ManagementPackComponentType componentType in MP.GetComponentTypes())
+                {
 
-                DataRow row = table.NewRow();
+                    DataRow row = table.NewRow();
 
-                row["Name"] = Common.Utilities.GetBestMPElementName(componentType);
-                row["Accessibility"] = componentType.Accessibility;
-                //row["Target"] = componentType.Target; // is this string here good enough? it uses the mpelement:// syntax...
-                row["Description"] = componentType.Description;
-                row["ObjectRef"] = componentType.Name;
-
-                table.Rows.Add(row);
+                    row["Name"] = Common.Utilities.GetBestMPElementName(componentType);
+                    row["Accessibility"] = componentType.Accessibility;
+                    //row["Target"] = componentType.Target; // is this string here good enough? it uses the mpelement:// syntax...
+                    row["Description"] = componentType.Description;
+                    row["ObjectRef"] = componentType.GetManagementPack().Name + ';' + componentType.Name;
+                    row["Management Pack"] = componentType.GetManagementPack().Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -346,57 +417,63 @@ namespace MPViewer
             table.Columns.Add("Visible", Type.GetType("System.Boolean"));                        
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
+            table.Columns.Add("Management Pack");
 
-            foreach (ManagementPackView view in m_managementPack.GetViews())
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
 
-                row["Name"]             = Common.Utilities.GetBestMPElementName(view);
-                row["Target"]           = AttempToResolveName(view.Target);
-                row["Accessibility"]    = view.Accessibility;
-                row["Visible"]          = view.Visible;
-                row["Description"]      = view.Description;
+                foreach (ManagementPackView view in MP.GetViews())
+                {
+                    DataRow row = table.NewRow();
 
-                if (view.TypeID.Name == "Microsoft.SystemCenter.AlertViewType")
-                {
-                    row["Type"] = "Alert View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.DashboardViewType")
-                {
-                    row["Type"] = "Dashboard View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.DiagramViewType")
-                {
-                    row["Type"] = "Diagram View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.EventViewType")
-                {
-                    row["Type"] = "Event View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.InventoryViewType")
-                {
-                    row["Type"] = "Inventory View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.PerformanceViewType")
-                {
-                    row["Type"] = "Performance View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.StateViewType")
-                {
-                    row["Type"] = "State View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.TaskStatusViewType")
-                {
-                    row["Type"] = "Task View";
-                }
-                else if (view.TypeID.Name == "Microsoft.SystemCenter.UrlViewType")
-                {
-                    row["Type"] = "Url View";
-                }
+                    row["Name"] = Common.Utilities.GetBestMPElementName(view);
+                    row["Target"] = AttempToResolveName(view.Target);
+                    row["Accessibility"] = view.Accessibility;
+                    row["Visible"] = view.Visible;
+                    row["Description"] = view.Description;
+                    row["Management Pack"] = view.GetManagementPack().Name;
 
-                row["ObjectRef"]        = view.Name;
+                    if (view.TypeID.Name == "Microsoft.SystemCenter.AlertViewType")
+                    {
+                        row["Type"] = "Alert View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.DashboardViewType")
+                    {
+                        row["Type"] = "Dashboard View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.DiagramViewType")
+                    {
+                        row["Type"] = "Diagram View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.EventViewType")
+                    {
+                        row["Type"] = "Event View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.InventoryViewType")
+                    {
+                        row["Type"] = "Inventory View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.PerformanceViewType")
+                    {
+                        row["Type"] = "Performance View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.StateViewType")
+                    {
+                        row["Type"] = "State View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.TaskStatusViewType")
+                    {
+                        row["Type"] = "Task View";
+                    }
+                    else if (view.TypeID.Name == "Microsoft.SystemCenter.UrlViewType")
+                    {
+                        row["Type"] = "Url View";
+                    }
 
-                table.Rows.Add(row);                
+                    row["ObjectRef"] = view.GetManagementPack().Name + ';' + view.Name;
+
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -411,21 +488,25 @@ namespace MPViewer
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackClass mpClass in m_managementPack.GetClasses())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
-
-                if(mpClass.Base.Name == "System.Group" ||
-                   mpClass.Base.Name == "Microsoft.SystemCenter.InstanceGroup" ||
-                   mpClass.Base.Name == "Microsoft.SystemCenter.ComputerGroup")                   
+                foreach (ManagementPackClass mpClass in MP.GetClasses())
                 {
-                    row["Name"]             = Common.Utilities.GetBestMPElementName(mpClass);
-                    row["Description"]      = mpClass.Description;
-                    row["Accessibility"]    = mpClass.Accessibility;
-                    row["ObjectRef"]        = mpClass.Name;
+                    DataRow row = table.NewRow();
 
-                    table.Rows.Add(row);
+                    if (mpClass.Base.Name == "System.Group" ||
+                       mpClass.Base.Name == "Microsoft.SystemCenter.InstanceGroup" ||
+                       mpClass.Base.Name == "Microsoft.SystemCenter.ComputerGroup")
+                    {
+                        row["Name"] = Common.Utilities.GetBestMPElementName(mpClass);
+                        row["Description"] = mpClass.Description;
+                        row["Accessibility"] = mpClass.Accessibility;
+                        row["ObjectRef"] = mpClass.GetManagementPack().Name + ';' + mpClass.Name;
+                        row["Management Pack"] = mpClass.GetManagementPack().Name;
+
+                        table.Rows.Add(row);
+                    }
                 }
             }
         }
@@ -443,91 +524,97 @@ namespace MPViewer
             table.Columns.Add("Property", Type.GetType("System.String"));
             table.Columns.Add("Value", Type.GetType("System.String"));
             table.Columns.Add("Is Enforced", Type.GetType("System.Boolean"));
+            table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackOverride mpOverride in m_managementPack.GetOverrides())
-            {
-                DataRow row = table.NewRow();
-
-                row["Name"]         = mpOverride.Name;
-                row["Value"]        = mpOverride.Value;
-                row["Is Enforced"]  = mpOverride.Enforced;
-                row["Name"]         = AttempToResolveName(mpOverride.Context);
-
-                if (mpOverride is ManagementPackDiscoveryOverride)
+            table.Columns.Add("Management Pack");
+            foreach(ManagementPack MP in m_managementPack){
+                foreach (ManagementPackOverride mpOverride in MP.GetOverrides())
                 {
-                    row["Workflow Type"] = "Discovery";
-                    row["Workflow"] = AttempToResolveName(((ManagementPackDiscoveryOverride)mpOverride).Discovery);
+                    DataRow row = table.NewRow();
 
-                    if (mpOverride is ManagementPackDiscoveryConfigurationOverride)
+                    row["Name"] = mpOverride.Name;
+                    row["Value"] = mpOverride.Value;
+                    row["Is Enforced"] = mpOverride.Enforced;
+                    row["Name"] = AttempToResolveName(mpOverride.Context);
+                    row["Management Pack"] = mpOverride.GetManagementPack().Name;
+
+                    if (mpOverride is ManagementPackDiscoveryOverride)
                     {
-                        row["Property"] = ((ManagementPackDiscoveryConfigurationOverride)mpOverride).Parameter;
+                        row["Workflow Type"] = "Discovery";
+                        row["Workflow"] = AttempToResolveName(((ManagementPackDiscoveryOverride)mpOverride).Discovery);
+
+                        if (mpOverride is ManagementPackDiscoveryConfigurationOverride)
+                        {
+                            row["Property"] = ((ManagementPackDiscoveryConfigurationOverride)mpOverride).Parameter;
+                        }
+                        else if (mpOverride is ManagementPackDiscoveryPropertyOverride)
+                        {
+                            row["Property"] = ((ManagementPackDiscoveryPropertyOverride)mpOverride).Property.ToString();
+                        }
                     }
-                    else if (mpOverride is ManagementPackDiscoveryPropertyOverride)
+                    else if (mpOverride is ManagementPackRuleOverride)
                     {
-                        row["Property"] = ((ManagementPackDiscoveryPropertyOverride)mpOverride).Property.ToString();
+                        row["Workflow Type"] = "Rule";
+                        row["Workflow"] = AttempToResolveName(((ManagementPackRuleOverride)mpOverride).Rule);
+
+                        if (mpOverride is ManagementPackRuleConfigurationOverride)
+                        {
+                            row["Property"] = ((ManagementPackRuleConfigurationOverride)mpOverride).Parameter;
+                        }
+                        else if (mpOverride is ManagementPackRulePropertyOverride)
+                        {
+                            row["Property"] = ((ManagementPackRulePropertyOverride)mpOverride).Property.ToString();
+                        }
                     }
+                    else if (mpOverride is ManagementPackMonitorOverride)
+                    {
+                        row["Workflow Type"] = "Monitor";
+                        row["Workflow"] = AttempToResolveName(((ManagementPackMonitorOverride)mpOverride).Monitor);
+
+                        if (mpOverride is ManagementPackMonitorConfigurationOverride)
+                        {
+                            row["Property"] = ((ManagementPackMonitorConfigurationOverride)mpOverride).Parameter;
+                        }
+                        else if (mpOverride is ManagementPackMonitorPropertyOverride)
+                        {
+                            row["Property"] = ((ManagementPackMonitorPropertyOverride)mpOverride).Property.ToString();
+                        }
+                    }
+                    else if (mpOverride is ManagementPackDiagnosticOverride)
+                    {
+                        row["Workflow Type"] = "Diagnostic";
+                        row["Workflow"] = AttempToResolveName(((ManagementPackDiagnosticOverride)mpOverride).Diagnostic);
+
+                        if (mpOverride is ManagementPackDiagnosticConfigurationOverride)
+                        {
+                            row["Property"] = ((ManagementPackDiagnosticConfigurationOverride)mpOverride).Parameter;
+                        }
+                        else if (mpOverride is ManagementPackDiagnosticPropertyOverride)
+                        {
+                            row["Property"] = ((ManagementPackDiagnosticPropertyOverride)mpOverride).Property.ToString();
+                        }
+                    }
+                    else if (mpOverride is ManagementPackRecoveryOverride)
+                    {
+                        row["Workflow Type"] = "Recovery";
+                        row["Workflow"] = AttempToResolveName(((ManagementPackRecoveryOverride)mpOverride).Recovery);
+
+                        if (mpOverride is ManagementPackRecoveryConfigurationOverride)
+                        {
+                            row["Property"] = ((ManagementPackRecoveryConfigurationOverride)mpOverride).Parameter;
+                        }
+                        else if (mpOverride is ManagementPackRecoveryPropertyOverride)
+                        {
+                            row["Property"] = ((ManagementPackRecoveryPropertyOverride)mpOverride).Property.ToString();
+                        }
+                    }
+
+                    row["ObjectRef"] = mpOverride.GetManagementPack().Name + ';' + mpOverride.Name;
+                    row["Description"] = mpOverride.Description;
+                    row["Management Pack"] = mpOverride.GetManagementPack().Name;
+
+                    table.Rows.Add(row);
                 }
-                else if (mpOverride is ManagementPackRuleOverride)
-                {
-                    row["Workflow Type"] = "Rule";
-                    row["Workflow"] = AttempToResolveName(((ManagementPackRuleOverride)mpOverride).Rule);
-
-                    if (mpOverride is ManagementPackRuleConfigurationOverride)
-                    {
-                        row["Property"] = ((ManagementPackRuleConfigurationOverride)mpOverride).Parameter;
-                    }
-                    else if (mpOverride is ManagementPackRulePropertyOverride)
-                    {
-                        row["Property"] = ((ManagementPackRulePropertyOverride)mpOverride).Property.ToString();
-                    }
-                }
-                else if (mpOverride is ManagementPackMonitorOverride)
-                {
-                    row["Workflow Type"] = "Monitor";
-                    row["Workflow"] = AttempToResolveName(((ManagementPackMonitorOverride)mpOverride).Monitor);
-
-                    if (mpOverride is ManagementPackMonitorConfigurationOverride)
-                    {
-                        row["Property"] = ((ManagementPackMonitorConfigurationOverride)mpOverride).Parameter;
-                    }
-                    else if (mpOverride is ManagementPackMonitorPropertyOverride)
-                    {
-                        row["Property"] = ((ManagementPackMonitorPropertyOverride)mpOverride).Property.ToString();
-                    }
-                }
-                else if (mpOverride is ManagementPackDiagnosticOverride)
-                {
-                    row["Workflow Type"] = "Diagnostic";
-                    row["Workflow"] = AttempToResolveName(((ManagementPackDiagnosticOverride)mpOverride).Diagnostic);
-
-                    if (mpOverride is ManagementPackDiagnosticConfigurationOverride)
-                    {
-                        row["Property"] = ((ManagementPackDiagnosticConfigurationOverride)mpOverride).Parameter;
-                    }
-                    else if (mpOverride is ManagementPackDiagnosticPropertyOverride)
-                    {
-                        row["Property"] = ((ManagementPackDiagnosticPropertyOverride)mpOverride).Property.ToString();
-                    }
-                }
-                else if (mpOverride is ManagementPackRecoveryOverride)
-                {
-                    row["Workflow Type"] = "Recovery";
-                    row["Workflow"] = AttempToResolveName(((ManagementPackRecoveryOverride)mpOverride).Recovery);
-
-                    if (mpOverride is ManagementPackRecoveryConfigurationOverride)
-                    {
-                        row["Property"] = ((ManagementPackRecoveryConfigurationOverride)mpOverride).Parameter;
-                    }
-                    else if (mpOverride is ManagementPackRecoveryPropertyOverride)
-                    {
-                        row["Property"] = ((ManagementPackRecoveryPropertyOverride)mpOverride).Property.ToString();
-                    }
-                }
-
-                row["ObjectRef"] = mpOverride.Name;
-
-                table.Rows.Add(row);
             }
         }
 
@@ -569,21 +656,24 @@ namespace MPViewer
             table.Columns.Add("Execute On State", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackDiagnostic diagnostic in m_managementPack.GetDiagnostics())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackDiagnostic diagnostic in MP.GetDiagnostics())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]             = Utilities.GetBestMPElementName(diagnostic);
-                row["Target"]           = AttempToResolveName(diagnostic.Target);
-                row["Monitor Name"]     = diagnostic.Monitor.Name;
-                row["Remotable"]        = diagnostic.Remotable;
-                row["Timeout"]          = diagnostic.Timeout.ToString();
-                row["Execute On State"] = diagnostic.ExecuteOnState.ToString();
-                row["Description"]      = diagnostic.Description;
-                row["ObjectRef"]        = diagnostic.Name;
-
-                table.Rows.Add(row);
+                    row["Name"] = Utilities.GetBestMPElementName(diagnostic);
+                    row["Target"] = AttempToResolveName(diagnostic.Target);
+                    row["Monitor Name"] = diagnostic.Monitor.Name;
+                    row["Remotable"] = diagnostic.Remotable;
+                    row["Timeout"] = diagnostic.Timeout.ToString();
+                    row["Execute On State"] = diagnostic.ExecuteOnState.ToString();
+                    row["Description"] = diagnostic.Description;
+                    row["ObjectRef"] = diagnostic.GetManagementPack().Name + ';' + diagnostic.Name;
+                    row["Management Pack"] = diagnostic.GetManagementPack().Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -602,21 +692,24 @@ namespace MPViewer
             table.Columns.Add("Timeout", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackRecovery recovery in m_managementPack.GetRecoveries())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackRecovery recovery in MP.GetRecoveries())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]             = Utilities.GetBestMPElementName(recovery);
-                row["Target"]           = AttempToResolveName(recovery.Target);
-                row["Monitor Name"]     = recovery.Monitor.Name;
-                row["Reset Monitor"]    = recovery.ResetMonitor;
-                row["Remotable"]        = recovery.Remotable;
-                row["Timeout"]          = recovery.Timeout.ToString();
-                row["Description"]      = recovery.Description;
-                row["ObjectRef"]        = recovery.Name;
-
-                table.Rows.Add(row);
+                    row["Name"] = Utilities.GetBestMPElementName(recovery);
+                    row["Target"] = AttempToResolveName(recovery.Target);
+                    row["Monitor Name"] = recovery.Monitor.Name;
+                    row["Reset Monitor"] = recovery.ResetMonitor;
+                    row["Remotable"] = recovery.Remotable;
+                    row["Timeout"] = recovery.Timeout.ToString();
+                    row["Description"] = recovery.Description;
+                    row["ObjectRef"] = recovery.GetManagementPack().Name + ';' + recovery.Name;
+                    row["Management Pack"] = recovery.GetManagementPack().Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -633,18 +726,25 @@ namespace MPViewer
             table.Columns.Add("Type", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackRelationship relationship in m_managementPack.GetRelationships())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackRelationship relationship in MP.GetRelationships())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]         = Utilities.GetBestMPElementName(relationship);
-                row["Source"] = AttempToResolveName(relationship.Source.Type);
-                row["Target"] = AttempToResolveName(relationship.Target.Type);
-                row["Type"]         = relationship.Base.Name;
-                row["Description"]  = relationship.Description;
-                row["ObjectRef"]    = relationship.Name;
-                table.Rows.Add(row);
+                    row["Name"] = Utilities.GetBestMPElementName(relationship);
+                    row["Source"] = AttempToResolveName(relationship.Source.Type);
+                    row["Target"] = AttempToResolveName(relationship.Target.Type);
+                    if (relationship.Base != null)
+                    {
+                        row["Type"] = relationship.Base.Name;
+                    }
+                    row["Description"] = relationship.Description;
+                    row["ObjectRef"] = relationship.GetManagementPack().Name + ';' + relationship.Name;
+                    row["Management Pack"] =  relationship.GetManagementPack().Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -663,20 +763,24 @@ namespace MPViewer
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));            
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackClass mpClass in m_managementPack.GetClasses())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackClass mpClass in MP.GetClasses())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]             = Utilities.GetBestMPElementName(mpClass);
-                row["Base Class"]       = AttempToResolveName(mpClass.Base);
-                row["Is Abstract"]      = mpClass.Abstract;
-                row["Is Hosted"]        = mpClass.Hosted;
-                row["Is Singleton"]     = mpClass.Singleton;
-                row["Accessibility"]    = mpClass.Accessibility.ToString();
-                row["Description"]      = mpClass.Description;
-                row["ObjectRef"]        = mpClass.Name;
-                table.Rows.Add(row);
+                    row["Name"] = Utilities.GetBestMPElementName(mpClass);
+                    row["Base Class"] = AttempToResolveName(mpClass.Base);
+                    row["Is Abstract"] = mpClass.Abstract;
+                    row["Is Hosted"] = mpClass.Hosted;
+                    row["Is Singleton"] = mpClass.Singleton;
+                    row["Accessibility"] = mpClass.Accessibility.ToString();
+                    row["Description"] = mpClass.Description;
+                    row["ObjectRef"] = mpClass.GetManagementPack().Name + ';' + mpClass.Name;
+                    row["Management Pack"] = mpClass.GetManagementPack().Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -691,17 +795,20 @@ namespace MPViewer
             table.Columns.Add("Version", Type.GetType("System.String"));
             table.Columns.Add("KeyToken", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (KeyValuePair<string, ManagementPackReference> reference in m_managementPack.References)
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (KeyValuePair<string, ManagementPackReference> reference in MP.References)
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]         = reference.Value.Name;
-                row["Version"]      = reference.Value.Version.ToString();
-                row["KeyToken"]     = reference.Value.KeyToken.ToString();
-                row["ObjectRef"]    = reference.Key;
-
-                table.Rows.Add(row);
+                    row["Name"] = reference.Value.Name;
+                    row["Version"] = reference.Value.Version.ToString();
+                    row["KeyToken"] = reference.Value.KeyToken.ToString();
+                    row["ObjectRef"] =  MP.Name + ';' + reference.Key;
+                    row["Management Pack"] = MP.Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -728,36 +835,40 @@ namespace MPViewer
             table.Columns.Add("Accessibility", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackMonitor monitor in m_managementPack.GetMonitors())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
-
-                if (!(monitor is ManagementPackUnitMonitor))
+                foreach (ManagementPackMonitor monitor in MP.GetMonitors())
                 {
-                    continue;
+                    DataRow row = table.NewRow();
+
+                    if (!(monitor is ManagementPackUnitMonitor))
+                    {
+                        continue;
+                    }
+
+                    PopulateGenericMonitorProperties(monitor, row);
+
+                    ManagementPackUnitMonitor unitMonitor = (ManagementPackUnitMonitor)monitor;
+
+                    row["MonitorType"] = GetFriendlyMonitorTypeName(unitMonitor.TypeID.Name);
+
+
+                    if (IsPerformanceUnitMonitor(unitMonitor))
+                    {
+                        string counterName;
+                        string objectName;
+                        string frequency;
+
+                        ExtractCounterAndObjectNameFromConfig(unitMonitor.Configuration, out objectName, out counterName, out frequency);
+
+                        row["Object Name"] = objectName;
+                        row["Counter Name"] = counterName;
+                        row["Frequency"] = frequency;
+                    }
+
+                    table.Rows.Add(row);
                 }
-
-                PopulateGenericMonitorProperties(monitor, row);
-
-                ManagementPackUnitMonitor unitMonitor = (ManagementPackUnitMonitor)monitor;
-
-                row["MonitorType"] = GetFriendlyMonitorTypeName(unitMonitor.TypeID.Name);
-                
-                if (IsPerformanceUnitMonitor(unitMonitor))
-                {
-                    string counterName;
-                    string objectName;
-                    string frequency;
-
-                    ExtractCounterAndObjectNameFromConfig(unitMonitor.Configuration, out objectName, out counterName, out frequency);
-
-                    row["Object Name"] = objectName;
-                    row["Counter Name"] = counterName;
-                    row["Frequency"] = frequency;
-                }     
-
-                table.Rows.Add(row);
             }
         }
 
@@ -829,26 +940,29 @@ namespace MPViewer
             table.Columns.Add("Remotable", Type.GetType("System.Boolean"));
             table.Columns.Add("Description", Type.GetType("System.String"));            
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackRule rule in m_managementPack.GetRules())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackRule rule in MP.GetRules())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]         = Utilities.GetBestMPElementName(rule);
-                row["Category"]     = rule.Category.ToString();
-                row["Enabled"]      = (rule.Enabled != ManagementPackMonitoringLevel.@false);
-                row["ObjectRef"]    = rule.Name;
-                row["Target"]       = AttempToResolveName(rule.Target);
+                    row["Name"] = Utilities.GetBestMPElementName(rule);
+                    row["Category"] = rule.Category.ToString();
+                    row["Enabled"] = (rule.Enabled != ManagementPackMonitoringLevel.@false);
+                    row["ObjectRef"] = rule.GetManagementPack().Name + ';' + rule.Name;
+                    row["Target"] = AttempToResolveName(rule.Target);
+                    row["Management Pack"] = rule.GetManagementPack().Name;
+                    ExtractAlertGenerationInfo(rule, row);
+                    ExtractPerfCounterInfo(rule, row);
 
-                ExtractAlertGenerationInfo(rule, row);
-                ExtractPerfCounterInfo(rule, row);
+                    ExtractEventLogData(rule, row);
 
-                ExtractEventLogData(rule, row);
+                    row["Remotable"] = rule.Remotable;
+                    row["Description"] = rule.Description;
 
-                row["Remotable"]        = rule.Remotable;
-                row["Description"]      = rule.Description;
-
-                table.Rows.Add(row);
+                    table.Rows.Add(row);
+                }
             }
         }
 
@@ -1328,26 +1442,29 @@ namespace MPViewer
             table.Columns.Add("Remotable", Type.GetType("System.Boolean"));
             table.Columns.Add("Description", Type.GetType("System.String"));
             table.Columns.Add("ObjectRef");
-
-            foreach (ManagementPackDiscovery discovery in m_managementPack.GetDiscoveries())
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
             {
-                DataRow row = table.NewRow();
+                foreach (ManagementPackDiscovery discovery in MP.GetDiscoveries())
+                {
+                    DataRow row = table.NewRow();
 
-                row["Name"]         = Utilities.GetBestMPElementName(discovery);
-                row["Enabled"]      = (discovery.Enabled != ManagementPackMonitoringLevel.@false);
-                row["Frequency"]    = RetrieveDiscoveryFrequency(discovery);
-                row["Description"]  = discovery.Description;
-                row["ObjectRef"]    = discovery.Name;
-                row["Target"]       = AttempToResolveName(discovery.Target);
-                row["Remotable"]    = discovery.Remotable;
-
-                table.Rows.Add(row);
+                    row["Name"] = Utilities.GetBestMPElementName(discovery);
+                    row["Enabled"] = (discovery.Enabled != ManagementPackMonitoringLevel.@false);
+                    row["Frequency"] = RetrieveDiscoveryFrequency(discovery);
+                    row["Description"] = discovery.Description;
+                    row["ObjectRef"] = discovery.GetManagementPack().Name + ';' + discovery.Name;
+                    row["Target"] = AttempToResolveName(discovery.Target);
+                    row["Remotable"] = discovery.Remotable;
+                    row["Management Pack"] = MP.Name;
+                    table.Rows.Add(row);
+                }
             }
         }
 
         //---------------------------------------------------------------------
         private void CreateGenericTable<MPElementType>(
-            ManagementPackElementCollection<MPElementType>  mpElementCollection,
+            IList<ManagementPackElementCollection<MPElementType>>  mpElementCollection,
             string                                          tableName,
             bool                                            isWorkflow,
             bool                                            hasTarget
@@ -1359,6 +1476,8 @@ namespace MPViewer
 
             table.Columns.Add("Name", Type.GetType("System.String"));
             table.Columns.Add("Description", Type.GetType("System.String"));
+            
+            
 
             if (isWorkflow)
             {
@@ -1371,49 +1490,52 @@ namespace MPViewer
             }
             
             table.Columns.Add("ObjectRef");
+            table.Columns.Add("Management Pack");
+            foreach(ManagementPackElementCollection<MPElementType> MPE in mpElementCollection){
+                foreach (MPElementType element in MPE)
+                {
+                    DataRow row = table.NewRow();
 
-            foreach (MPElementType element in mpElementCollection)
-            {
-                DataRow row = table.NewRow();
+                    row["Name"] = Utilities.GetBestMPElementName(element);
+                    row["Description"] = element.Description;
+                    row["Management Pack"] = element.GetManagementPack().Name;
 
-                row["Name"]         = Utilities.GetBestMPElementName(element);
-                row["Description"]  = element.Description;
+                    if (element is ManagementPackRecovery)
+                    {
+                        row["Remotable"] = ((ManagementPackRecovery)(ManagementPackElement)element).Remotable;
+                        row["Target"] = AttempToResolveName(((ManagementPackRecovery)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackDiagnostic)
+                    {
+                        row["Remotable"] = ((ManagementPackDiagnostic)(ManagementPackElement)element).Remotable;
+                        row["Target"] = AttempToResolveName(((ManagementPackDiagnostic)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackTask)
+                    {
+                        row["Remotable"] = ((ManagementPackTask)(ManagementPackElement)element).Remotable;
+                        row["Target"] = AttempToResolveName(((ManagementPackTask)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackLinkedReport)
+                    {
+                        row["Target"] = AttempToResolveName(((ManagementPackLinkedReport)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackReport)
+                    {
+                        row["Target"] = AttempToResolveName(((ManagementPackReport)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackConsoleTask)
+                    {
+                        row["Target"] = AttempToResolveName(((ManagementPackConsoleTask)(ManagementPackElement)element).Target);
+                    }
+                    else if (element is ManagementPackView)
+                    {
+                        row["Target"] = AttempToResolveName(((ManagementPackView)(ManagementPackElement)element).Target);
+                    }
 
-                if (element is ManagementPackRecovery)
-                {
-                    row["Remotable"] = ((ManagementPackRecovery)(ManagementPackElement)element).Remotable;
-                    row["Target"] = AttempToResolveName(((ManagementPackRecovery)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackDiagnostic)
-                {
-                    row["Remotable"] = ((ManagementPackDiagnostic)(ManagementPackElement)element).Remotable;
-                    row["Target"] = AttempToResolveName(((ManagementPackDiagnostic)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackTask)
-                {
-                    row["Remotable"] = ((ManagementPackTask)(ManagementPackElement)element).Remotable;
-                    row["Target"] = AttempToResolveName(((ManagementPackTask)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackLinkedReport)
-                {
-                    row["Target"] = AttempToResolveName(((ManagementPackLinkedReport)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackReport)
-                {
-                    row["Target"] = AttempToResolveName(((ManagementPackReport)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackConsoleTask)
-                {
-                    row["Target"] = AttempToResolveName(((ManagementPackConsoleTask)(ManagementPackElement)element).Target);
-                }
-                else if (element is ManagementPackView)
-                {
-                    row["Target"] = AttempToResolveName(((ManagementPackView)(ManagementPackElement)element).Target);
-                }
+                    row["ObjectRef"] = element.GetManagementPack().Name + ';' + element.Name;
 
-                row["ObjectRef"]    = element.Name;
-
-                table.Rows.Add(row);
+                    table.Rows.Add(row);
+                }
             }
         }
 

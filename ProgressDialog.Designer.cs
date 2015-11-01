@@ -66,6 +66,7 @@
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.lblCurrentOperation);
             this.Controls.Add(this.lblProgress);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Name = "ProgressDialog";
             this.Text = "Progress";
             this.Load += new System.EventHandler(this.ProgressDialog_Load);

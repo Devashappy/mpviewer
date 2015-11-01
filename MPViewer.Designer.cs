@@ -41,14 +41,27 @@ namespace MPViewer
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fileToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.managementGroupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unsealManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveToExcelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveToHTMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.saveToExcelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.backgroundWorker = new System.ComponentModel.BackgroundWorker();
+            this.elementActionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.disableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.existingManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.existingManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.reloadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
             this.splitContainer.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.detailsSplitContainer)).BeginInit();
             this.detailsSplitContainer.Panel1.SuspendLayout();
             this.detailsSplitContainer.Panel2.SuspendLayout();
             this.detailsSplitContainer.SuspendLayout();
@@ -94,9 +107,7 @@ namespace MPViewer
             // 
             // detailsSplitContainer.Panel1
             // 
-
-            mpElementListView = new SortableListView();
-            this.detailsSplitContainer.Panel1.Controls.Add(this.mpElementListView);
+           
             // 
             // detailsSplitContainer.Panel2
             // 
@@ -107,17 +118,17 @@ namespace MPViewer
             // 
             // mpElementListView
             // 
+            this.mpElementListView = new SortableListView();
             this.mpElementListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.mpElementListView.FullRowSelect = true;
-            this.mpElementListView.HideSelection = false;
             this.mpElementListView.Location = new System.Drawing.Point(0, 0);
-            this.mpElementListView.MultiSelect = false;
             this.mpElementListView.Name = "mpElementListView";
             this.mpElementListView.Size = new System.Drawing.Size(572, 350);
             this.mpElementListView.TabIndex = 0;
             this.mpElementListView.UseCompatibleStateImageBehavior = false;
             this.mpElementListView.View = System.Windows.Forms.View.Details;
-            this.mpElementListView.SelectedIndexChanged += new System.EventHandler(this.mpElementListView_SelectedIndexChanged);
+            this.detailsSplitContainer.Panel1.Controls.Add(this.mpElementListView);
+            this.mpElementListView.SelectedIndexChanged += this.mpElementListView_SelectedIndexChanged;
             // 
             // detailsTabControl
             // 
@@ -175,7 +186,8 @@ namespace MPViewer
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem});
+            this.fileToolStripMenuItem,
+            this.elementActionsToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(722, 24);
@@ -187,47 +199,65 @@ namespace MPViewer
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadManagementPackToolStripMenuItem,
             this.unsealManagementPackToolStripMenuItem,
+            this.reloadToolStripMenuItem,
             this.saveToExcelToolStripMenuItem,
             this.saveToHTMLToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(35, 20);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             this.fileToolStripMenuItem.Text = "File";
             // 
             // loadManagementPackToolStripMenuItem
             // 
+            this.loadManagementPackToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fileToolStripMenuItem1,
+            this.managementGroupToolStripMenuItem});
             this.loadManagementPackToolStripMenuItem.Name = "loadManagementPackToolStripMenuItem";
-            this.loadManagementPackToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.loadManagementPackToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.loadManagementPackToolStripMenuItem.Text = "Load Management Pack";
-            this.loadManagementPackToolStripMenuItem.Click += new System.EventHandler(this.loadManagementPackToolStripMenuItem_Click);
+           
+            // 
+            // fileToolStripMenuItem1
+            // 
+            this.fileToolStripMenuItem1.Name = "fileToolStripMenuItem1";
+            this.fileToolStripMenuItem1.Size = new System.Drawing.Size(181, 22);
+            this.fileToolStripMenuItem1.Text = "File";
+            this.fileToolStripMenuItem1.Click += new System.EventHandler(this.fileToolStripMenuItem1_Click);
+            // 
+            // managementGroupToolStripMenuItem
+            // 
+            this.managementGroupToolStripMenuItem.Name = "managementGroupToolStripMenuItem";
+            this.managementGroupToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.managementGroupToolStripMenuItem.Text = "Management Group";
+            this.managementGroupToolStripMenuItem.Click += new System.EventHandler(this.managementGroupToolStripMenuItem_Click);
             // 
             // unsealManagementPackToolStripMenuItem
             // 
             this.unsealManagementPackToolStripMenuItem.Name = "unsealManagementPackToolStripMenuItem";
-            this.unsealManagementPackToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.unsealManagementPackToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.unsealManagementPackToolStripMenuItem.Text = "Unseal / Unpack Management Pack";
             this.unsealManagementPackToolStripMenuItem.Click += new System.EventHandler(this.unsealManagementPackToolStripMenuItem_Click);
+            // 
+            // saveToExcelToolStripMenuItem
+            // 
+            this.saveToExcelToolStripMenuItem.Name = "saveToExcelToolStripMenuItem";
+            this.saveToExcelToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
+            this.saveToExcelToolStripMenuItem.Text = "Save to Excel";
+            this.saveToExcelToolStripMenuItem.Click += new System.EventHandler(this.saveToExcelToolStripMenuItem_Click);
             // 
             // saveToHTMLToolStripMenuItem
             // 
             this.saveToHTMLToolStripMenuItem.Name = "saveToHTMLToolStripMenuItem";
-            this.saveToHTMLToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.saveToHTMLToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.saveToHTMLToolStripMenuItem.Text = "Save to HTML";
             this.saveToHTMLToolStripMenuItem.Click += new System.EventHandler(this.saveToHTMLToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
-            // 
-            // saveToExcelToolStripMenuItem
-            // 
-            this.saveToExcelToolStripMenuItem.Name = "saveToExcelToolStripMenuItem";
-            this.saveToExcelToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
-            this.saveToExcelToolStripMenuItem.Text = "Save to Excel";
-            this.saveToExcelToolStripMenuItem.Click += new System.EventHandler(this.saveToExcelToolStripMenuItem_Click);
             // 
             // backgroundWorker
             // 
@@ -236,6 +266,73 @@ namespace MPViewer
             this.backgroundWorker.ProgressChanged += new System.ComponentModel.ProgressChangedEventHandler(this.backgroundWorker_ProgressChanged);
             this.backgroundWorker.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker_RunWorkerCompleted);
             // 
+            // elementActionsToolStripMenuItem
+            // 
+            this.elementActionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.deleteToolStripMenuItem,
+            this.disableToolStripMenuItem,
+            this.enableToolStripMenuItem});
+            this.elementActionsToolStripMenuItem.Enabled = false;
+            this.elementActionsToolStripMenuItem.Name = "elementActionsToolStripMenuItem";
+            this.elementActionsToolStripMenuItem.Size = new System.Drawing.Size(105, 20);
+            this.elementActionsToolStripMenuItem.Text = "Element Actions";
+            // 
+            // deleteToolStripMenuItem
+            // 
+            this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
+            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.deleteToolStripMenuItem.Text = "Delete";
+            // 
+            // disableToolStripMenuItem
+            // 
+            this.disableToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newManagementPackToolStripMenuItem,
+            this.existingManagementPackToolStripMenuItem});
+            this.disableToolStripMenuItem.Name = "disableToolStripMenuItem";
+            this.disableToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.disableToolStripMenuItem.Text = "Disable";
+            this.disableToolStripMenuItem.Click += new System.EventHandler(this.disableToolStripMenuItem_Click);
+            // 
+            // enableToolStripMenuItem
+            // 
+            this.enableToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newManagementPackToolStripMenuItem1,
+            this.existingManagementPackToolStripMenuItem1});
+            this.enableToolStripMenuItem.Name = "enableToolStripMenuItem";
+            this.enableToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.enableToolStripMenuItem.Text = "Enable";
+            // 
+            // newManagementPackToolStripMenuItem
+            // 
+            this.newManagementPackToolStripMenuItem.Name = "newManagementPackToolStripMenuItem";
+            this.newManagementPackToolStripMenuItem.Size = new System.Drawing.Size(216, 22);
+            this.newManagementPackToolStripMenuItem.Text = "New Management Pack";
+            // 
+            // existingManagementPackToolStripMenuItem
+            // 
+            this.existingManagementPackToolStripMenuItem.Name = "existingManagementPackToolStripMenuItem";
+            this.existingManagementPackToolStripMenuItem.Size = new System.Drawing.Size(216, 22);
+            this.existingManagementPackToolStripMenuItem.Text = "Existing Management Pack";
+            // 
+            // newManagementPackToolStripMenuItem1
+            // 
+            this.newManagementPackToolStripMenuItem1.Name = "newManagementPackToolStripMenuItem1";
+            this.newManagementPackToolStripMenuItem1.Size = new System.Drawing.Size(216, 22);
+            this.newManagementPackToolStripMenuItem1.Text = "New Management Pack";
+            // 
+            // existingManagementPackToolStripMenuItem1
+            // 
+            this.existingManagementPackToolStripMenuItem1.Name = "existingManagementPackToolStripMenuItem1";
+            this.existingManagementPackToolStripMenuItem1.Size = new System.Drawing.Size(216, 22);
+            this.existingManagementPackToolStripMenuItem1.Text = "Existing Management Pack";
+            // 
+            // reloadToolStripMenuItem
+            // 
+            this.reloadToolStripMenuItem.Name = "reloadToolStripMenuItem";
+            this.reloadToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
+            this.reloadToolStripMenuItem.Text = "Reload";
+            this.reloadToolStripMenuItem.Click += new System.EventHandler(this.reloadToolStripMenuItem_Click);
+            // 
             // MPViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -243,8 +340,8 @@ namespace MPViewer
             this.ClientSize = new System.Drawing.Size(722, 676);
             this.Controls.Add(this.splitContainer);
             this.Controls.Add(this.menuStrip1);
-            this.MainMenuStrip = this.menuStrip1;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MainMenuStrip = this.menuStrip1;
             this.Name = "MPViewer";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Management Pack Viewer 2012";
@@ -252,9 +349,11 @@ namespace MPViewer
             this.Load += new System.EventHandler(this.MPViewer_Load);
             this.splitContainer.Panel1.ResumeLayout(false);
             this.splitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).EndInit();
             this.splitContainer.ResumeLayout(false);
             this.detailsSplitContainer.Panel1.ResumeLayout(false);
             this.detailsSplitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.detailsSplitContainer)).EndInit();
             this.detailsSplitContainer.ResumeLayout(false);
             this.detailsTabControl.ResumeLayout(false);
             this.knowledgeTab.ResumeLayout(false);
@@ -275,7 +374,6 @@ namespace MPViewer
         private System.Windows.Forms.ToolStripMenuItem unsealManagementPackToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.TreeView objectTypeTree;
-        private SortableListView mpElementListView;
         private System.Windows.Forms.SplitContainer detailsSplitContainer;
         private System.Windows.Forms.TabControl detailsTabControl;
         private System.Windows.Forms.TabPage knowledgeTab;
@@ -285,6 +383,17 @@ namespace MPViewer
         private System.Windows.Forms.ToolStripMenuItem saveToHTMLToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveToExcelToolStripMenuItem;
         private System.ComponentModel.BackgroundWorker backgroundWorker;
+        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem managementGroupToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem elementActionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem disableToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem enableToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem newManagementPackToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem existingManagementPackToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem newManagementPackToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem existingManagementPackToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem reloadToolStripMenuItem;
     }
 }
 

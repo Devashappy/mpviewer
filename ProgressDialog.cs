@@ -22,6 +22,7 @@ namespace MPViewer
             this.lblCurrentOperation.Text = progressInfo.Status;
             this.progressBar.Value = progressInfo.PercentageComplete;
         }
+       
 
     }
 }

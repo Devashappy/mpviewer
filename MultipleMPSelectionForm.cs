@@ -13,7 +13,7 @@ namespace MPViewer
 {
     public partial class MultipleMPSelectionForm : Form
     {
-        public ManagementPack ChosenMP;
+        public IList<ManagementPack> ChosenMP;
         private IList<ManagementPack> MPList;
 
         public MultipleMPSelectionForm(IList<ManagementPack> MPListInput)
@@ -27,13 +27,15 @@ namespace MPViewer
 
             this.MPSortableList.Columns.Add("Management Pack");
             this.MPSortableList.Columns.Add("Version");
-
+            this.MPSortableList.Columns.Add("Sealed");
+            this.MPSortableList.MultiSelect = true;
             foreach (ManagementPack mp in MPListInput)
             {
                 ListViewItem item = new ListViewItem();
                 item.Text = mp.Name;
                 item.SubItems.Add(mp.Version.ToString());
-
+                item.SubItems.Add(mp.Sealed.ToString());
+                item.Tag = mp;
                 this.MPSortableList.Items.Add(item);
             }
 
@@ -45,9 +47,12 @@ namespace MPViewer
 
         private void buttonOK_Click(object sender, EventArgs e)
         {
+            ChosenMP = new List<ManagementPack>();
             //since the form has multi-select disabled, the selected item is always index 0
-            IEnumerable<ManagementPack> ChosenMPCollection = MPList.Where(mp => mp.Name.Equals(this.MPSortableList.SelectedItems[0].Text));
-            ChosenMP = ChosenMPCollection.ToList()[0];
+            foreach (ListViewItem item in MPSortableList.SelectedItems)
+            {
+                ChosenMP.Add((ManagementPack)item.Tag);
+            }
             this.Close();
             return;
         }

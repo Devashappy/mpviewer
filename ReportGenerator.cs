@@ -10,11 +10,11 @@ namespace MPViewer
 {
     class ReportGenerator
     {
-        DataSet         m_dataset;
-        ManagementPack  m_mp;
+        DataSet m_dataset;
+        IList<ManagementPack> m_mp;
 
         //---------------------------------------------------------------------
-        internal ReportGenerator(DataSet dataSet,ManagementPack mp)
+        internal ReportGenerator(DataSet dataSet, IList<ManagementPack> mp)
         {
             m_dataset = dataSet;
             m_mp = mp;
@@ -24,10 +24,13 @@ namespace MPViewer
         internal void GenerateHTMLReport(string filePath, bool exportAlertGeneratingWorkflowsOnly)
         {
             StringBuilder html = new StringBuilder("<HTML><Body>");
-
-            html.AppendFormat("<h3>Management Pack Name: {0}</h3>", Utilities.GetBestManagementPackName(m_mp));
-            html.AppendFormat("<h3>Management Pack Version: {0}</h3>", m_mp.Version.ToString());
-
+            foreach (ManagementPack MP in m_mp)
+            {
+                html.Append("<hr />");
+                html.AppendFormat("<h3>Management Pack Name: {0}</h3>", Utilities.GetBestManagementPackName(MP));
+                html.AppendFormat("<h3>Management Pack Version: {0}</h3>", MP.Version.ToString());
+                html.Append("<hr />");
+            }
             foreach (DataTable table in m_dataset.Tables)
             {
                 if (table.Rows.Count > 0)
@@ -49,7 +52,8 @@ namespace MPViewer
 
             html.Append("</Body></HTML>");
 
-            File.WriteAllText(filePath,html.ToString());
+            File.WriteAllText(filePath, html.ToString());
+
         }
 
         //---------------------------------------------------------------------
@@ -60,6 +64,7 @@ namespace MPViewer
             stringBuilder.AppendLine(@"<table cellSpacing=""0"" cellPadding=""0"" border=""0"" width=""100%"">");
             stringBuilder.AppendLine("<thead>");
             stringBuilder.AppendLine("<tr>");
+            IList<string> Columns = new List<string>();
 
             foreach (DataColumn column in table.Columns)
             {
@@ -67,14 +72,14 @@ namespace MPViewer
                 {
                     continue;
                 }
-
+                Columns.Add(column.ColumnName);
                 stringBuilder.AppendFormat(@"<th style=""text-align:left;padding:4px;border-style:solid;border-width:1px;border-left-width:0px;border-color: #eeeeee;background-color: #666666;color: #ffffff;font-family: Tahoma, Arial, Helvetica;font-size: 80%;font-weight: bold;"">{0}</th>", column.ColumnName);
             }
 
             stringBuilder.AppendLine("</tr>");
             stringBuilder.AppendLine("</thead>");
 
-            for (int i = 0; i < table.Rows.Count;i++)
+            for (int i = 0; i < table.Rows.Count; i++)
             {
                 if ((i % 2) == 0)
                 {
@@ -90,36 +95,36 @@ namespace MPViewer
                     continue;
                 }
 
-                for (int k = 0; k < table.Columns.Count - 1; k++)
+                foreach (string ColumnName in Columns)
                 {
-                    string rowText = table.Rows[i][k].ToString();
+                    string rowText = table.Rows[i][ColumnName].ToString();
 
                     if (rowText == null || rowText.Length == 0)
                     {
                         rowText = " ";
                     }
 
-                    if (table.Columns[k].ColumnName == "Name")
+                    if (table.Columns[ColumnName].ColumnName == "Name")
                     {
                         stringBuilder.AppendFormat(@"<td width=""300px"">{0}</td>", rowText);
                     }
-                    else if (table.Columns[k].ColumnName == "Category")
+                    else if (table.Columns[ColumnName].ColumnName == "Category")
                     {
                         stringBuilder.AppendFormat(@"<td width=""120px"">{0}</td>", rowText);
                     }
-                    else if (table.Columns[k].ColumnName == "Enabled")
+                    else if (table.Columns[ColumnName].ColumnName == "Enabled")
                     {
                         stringBuilder.AppendFormat(@"<td width=""75px"">{0}</td>", rowText);
                     }
-                    else if (table.Columns[k].ColumnName == "Generate Alert")
+                    else if (table.Columns[ColumnName].ColumnName == "Generate Alert")
                     {
                         stringBuilder.AppendFormat(@"<td width=""100px"">{0}</td>", rowText);
                     }
-                    else if (table.Columns[k].ColumnName == "Alert Severity")
+                    else if (table.Columns[ColumnName].ColumnName == "Alert Severity")
                     {
                         stringBuilder.AppendFormat(@"<td width=""100px"">{0}</td>", rowText);
                     }
-                    else if (table.Columns[k].ColumnName == "Auto Resolve")
+                    else if (table.Columns[ColumnName].ColumnName == "Auto Resolve")
                     {
                         stringBuilder.AppendFormat(@"<td width=""100px"">{0}</td>", rowText);
                     }
@@ -143,7 +148,7 @@ namespace MPViewer
             // some people type xls, we give them excel xml anyway...
             if (filePath.EndsWith(".xml", StringComparison.InvariantCultureIgnoreCase))
                 filePath = filePath.Replace(".xml", ".xls");
-            
+
             ExportToExcel(filePath, m_dataset);
         }
 
