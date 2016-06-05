@@ -543,6 +543,7 @@ p.lastInCell	{
             objectTypeTree.Nodes.Add("Groups");
             objectTypeTree.Nodes.Add("Resources");
             objectTypeTree.Nodes.Add("Dashboards and Widgets");
+            objectTypeTree.Nodes.Add("Modules");
 
             objectTypeTree.Sort();
         }
@@ -741,6 +742,10 @@ p.lastInCell	{
             else if (objectType == "Management Packs")
             {
                 item.Tag = m_managementPack[info[0]];
+            }
+            else if(objectType == "Modules")
+            {
+                item.Tag = m_managementPack[info[0]].GetModuleType(info[1]);
             }
              
         }
@@ -1401,8 +1406,8 @@ p.lastInCell	{
             
             m_progressDialog.ShowDialog();
             MultipleMPSelectionForm form = new MultipleMPSelectionForm(MPList);
-            form.ShowDialog();
-            if (form.ChosenMP.Count > 0)
+            DialogResult r = form.ShowDialog();
+            if (r != DialogResult.Cancel && form.ChosenMP.Count > 0)
             {
                 foreach (ManagementPack item in form.ChosenMP)
                 {

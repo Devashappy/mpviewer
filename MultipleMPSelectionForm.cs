@@ -54,6 +54,7 @@ namespace MPViewer
                 ChosenMP.Add((ManagementPack)item.Tag);
             }
             this.Close();
+            this.DialogResult = DialogResult.OK;
             return;
         }
 

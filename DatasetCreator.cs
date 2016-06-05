@@ -44,6 +44,7 @@ namespace MPViewer
             CreateConsoleTasksTable();
             CreateResourcesTable();
             CreateDashboardsTable();
+            CreateModulesTable();
             IList<ManagementPackElementCollection<ManagementPackTask>> Tasks = new List<ManagementPackElementCollection<ManagementPackTask>>();
             IList<ManagementPackElementCollection<ManagementPackLinkedReport>> LinkedReports = new List<ManagementPackElementCollection<ManagementPackLinkedReport>>();
             IList<ManagementPackElementCollection<ManagementPackReport>> Reports = new List<ManagementPackElementCollection<ManagementPackReport>>();
@@ -121,7 +122,8 @@ namespace MPViewer
             
             m_mpLoadingProcess.DynamicInvoke(80, "Loading Dashboards");
             CreateDashboardsTable();
-
+            m_mpLoadingProcess.DynamicInvoke(81, "Loading Modules");
+            CreateModulesTable();
             IList<ManagementPackElementCollection<ManagementPackTask>> Tasks = new List<ManagementPackElementCollection<ManagementPackTask>>();
             IList<ManagementPackElementCollection<ManagementPackLinkedReport>> LinkedReports = new List<ManagementPackElementCollection<ManagementPackLinkedReport>>();
             IList<ManagementPackElementCollection<ManagementPackReport>> Reports = new List<ManagementPackElementCollection<ManagementPackReport>>();
@@ -209,6 +211,62 @@ namespace MPViewer
                 row["Token"] = mp.KeyToken;
                 row["ObjectRef"] = mp.Name + ';' + mp.Name;
                 table.Rows.Add(row);
+            }
+
+
+
+
+
+
+        }
+
+        //---------------------------------------------------------------------
+        private void CreateModulesTable()
+        {
+            DataTable table = new DataTable("Modules");
+            m_dataset.Tables.Add(table);
+            table.Columns.Add("Name");
+            table.Columns.Add("Display Name");
+            table.Columns.Add("Description");
+            table.Columns.Add("Type");
+            table.Columns.Add("Management Pack");
+
+            table.Columns.Add("ObjectRef");
+            foreach (ManagementPack mp in m_managementPack)
+            {
+                foreach (ManagementPackModuleType mod in mp.GetModuleTypes()) { 
+                    DataRow row = table.NewRow();
+                    row["Name"] = mod.Name;
+                    row["Display Name"] = mod.DisplayName;
+                    row["Description"] = mod.Description;
+                    Type type = mod.GetType();
+                    string moduletype = "";
+                    if (type.Equals(typeof(ManagementPackDataSourceModuleType)))
+                    {
+                        moduletype = "Data Source";
+                    }
+                    else if (type.Equals(typeof(ManagementPackProbeActionModuleType)))
+                    {
+                        moduletype = "Probe Action";
+                    }
+                    else if (type.Equals(typeof(ManagementPackConditionDetectionModuleType)))
+                    {
+                        moduletype = "Condition Detection";
+                    }
+                    else if (type.Equals(typeof(ManagementPackWriteActionModuleType)))
+                    {
+                        moduletype = "Write Action";
+                    }
+                    else
+                    {
+                        moduletype = "Unknown";
+                    }
+                    row["Type"] = moduletype;
+                    row["Management Pack"] = mod.GetManagementPack().Name;
+                 
+                    row["ObjectRef"] = mp.Name + ';' + mod.Name;
+                    table.Rows.Add(row);
+                }
             }
 
 
