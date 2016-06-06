@@ -322,17 +322,36 @@ p.lastInCell	{
         //---------------------------------------------------------------------
         public MPViewer()
         {
-            InitializeComponent();
+            
+            Init();
 
-            FormClosed += new FormClosedEventHandler(MPViewer_FormClosed);
-            Shown += new EventHandler(MPViewer_Shown);
-            m_managementPack = new Dictionary<String, ManagementPack>();
+           
+        }
+        public MPViewer(string path)
+        {
+            Init();
+            ManagementPack MP;
+            try {
+                    MP = new ManagementPack(path);
+                    m_managementPack.Add(MP.Name, MP);
+                    ProcessManagementPacks();
+                
+                } catch(Exception ex) { MessageBox.Show("Not a valid MP: " + path + "\r\n" + ex.Message); }
         }
 
         //---------------------------------------------------------------------
         void MPViewer_Shown(object sender, EventArgs e)
         {
           //  loadManagementPackToolStripMenuItem_Click(this, null); 
+        }
+
+        private void Init()
+        {
+            InitializeComponent();
+            FormClosed += new FormClosedEventHandler(MPViewer_FormClosed);
+            Shown += new EventHandler(MPViewer_Shown);
+            m_managementPack = new Dictionary<String, ManagementPack>();
+
         }
 
         //---------------------------------------------------------------------

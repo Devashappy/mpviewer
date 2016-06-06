@@ -5,15 +5,25 @@ using Microsoft.EnterpriseManagement.Configuration;
 using Microsoft.EnterpriseManagement.Configuration.IO;
 using Common;
 using Microsoft.EnterpriseManagement.Packaging;
+using System.IO;
 
 namespace MPViewer
 {
     static class Program
     {
+        static string path = "";
         [STAThread]
         static void Main(string[] args)
         {
-            if (args.Length == 1)
+            if(args.Length == 1 && File.Exists(args[0]))
+            {
+                path = args[0];
+            } else if(args.Length != 0)
+            {
+                MessageBox.Show("CommandLine not supported currently :(");
+                return;
+            }
+          /*  if (args.Length == 1)
             {
                 if (args[0].Length > 0)
                 {
@@ -67,11 +77,19 @@ namespace MPViewer
             }
             // load the GUI - standard execution path
             else
-            {
+            { */
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new MPViewer());
-            }
+                MPViewer MPViewer;
+                if (path.Length > 0)
+                {
+                    MPViewer = new MPViewer(path);
+                } else
+                {
+                    MPViewer = new MPViewer();
+                }
+                Application.Run(MPViewer);
+          //  }
         }
 
 

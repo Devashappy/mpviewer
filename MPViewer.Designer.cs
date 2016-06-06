@@ -44,6 +44,7 @@ namespace MPViewer
             this.fileToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.managementGroupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.unsealManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.reloadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveToExcelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveToHTMLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -51,12 +52,13 @@ namespace MPViewer
             this.elementActionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.disableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.enableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.existingManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.existingManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.reloadToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.mpElementListView = new Common.SortableListView();
+            this.mpElementListView.SelectedIndexChanged += mpElementListView_SelectedIndexChanged;
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
@@ -107,7 +109,7 @@ namespace MPViewer
             // 
             // detailsSplitContainer.Panel1
             // 
-           
+            this.detailsSplitContainer.Panel1.Controls.Add(this.mpElementListView);
             // 
             // detailsSplitContainer.Panel2
             // 
@@ -118,7 +120,6 @@ namespace MPViewer
             // 
             // mpElementListView
             // 
-            this.mpElementListView = new SortableListView();
             this.mpElementListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.mpElementListView.FullRowSelect = true;
             this.mpElementListView.Location = new System.Drawing.Point(0, 0);
@@ -127,13 +128,11 @@ namespace MPViewer
             this.mpElementListView.TabIndex = 0;
             this.mpElementListView.UseCompatibleStateImageBehavior = false;
             this.mpElementListView.View = System.Windows.Forms.View.Details;
-            this.detailsSplitContainer.Panel1.Controls.Add(this.mpElementListView);
-            this.mpElementListView.SelectedIndexChanged += this.mpElementListView_SelectedIndexChanged;
             // 
             // detailsTabControl
             // 
-            this.detailsTabControl.Controls.Add(this.knowledgeTab);
             this.detailsTabControl.Controls.Add(this.mpElementXmlTab);
+            this.detailsTabControl.Controls.Add(this.knowledgeTab);
             this.detailsTabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.detailsTabControl.Location = new System.Drawing.Point(0, 0);
             this.detailsTabControl.Name = "detailsTabControl";
@@ -214,7 +213,6 @@ namespace MPViewer
             this.loadManagementPackToolStripMenuItem.Name = "loadManagementPackToolStripMenuItem";
             this.loadManagementPackToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.loadManagementPackToolStripMenuItem.Text = "Load Management Pack";
-           
             // 
             // fileToolStripMenuItem1
             // 
@@ -236,6 +234,13 @@ namespace MPViewer
             this.unsealManagementPackToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
             this.unsealManagementPackToolStripMenuItem.Text = "Unseal / Unpack Management Pack";
             this.unsealManagementPackToolStripMenuItem.Click += new System.EventHandler(this.unsealManagementPackToolStripMenuItem_Click);
+            // 
+            // reloadToolStripMenuItem
+            // 
+            this.reloadToolStripMenuItem.Name = "reloadToolStripMenuItem";
+            this.reloadToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
+            this.reloadToolStripMenuItem.Text = "Reload";
+            this.reloadToolStripMenuItem.Click += new System.EventHandler(this.reloadToolStripMenuItem_Click);
             // 
             // saveToExcelToolStripMenuItem
             // 
@@ -279,7 +284,7 @@ namespace MPViewer
             // deleteToolStripMenuItem
             // 
             this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
-            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
             this.deleteToolStripMenuItem.Text = "Delete";
             // 
             // disableToolStripMenuItem
@@ -288,18 +293,9 @@ namespace MPViewer
             this.newManagementPackToolStripMenuItem,
             this.existingManagementPackToolStripMenuItem});
             this.disableToolStripMenuItem.Name = "disableToolStripMenuItem";
-            this.disableToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.disableToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
             this.disableToolStripMenuItem.Text = "Disable";
             this.disableToolStripMenuItem.Click += new System.EventHandler(this.disableToolStripMenuItem_Click);
-            // 
-            // enableToolStripMenuItem
-            // 
-            this.enableToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.newManagementPackToolStripMenuItem1,
-            this.existingManagementPackToolStripMenuItem1});
-            this.enableToolStripMenuItem.Name = "enableToolStripMenuItem";
-            this.enableToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-            this.enableToolStripMenuItem.Text = "Enable";
             // 
             // newManagementPackToolStripMenuItem
             // 
@@ -313,6 +309,15 @@ namespace MPViewer
             this.existingManagementPackToolStripMenuItem.Size = new System.Drawing.Size(216, 22);
             this.existingManagementPackToolStripMenuItem.Text = "Existing Management Pack";
             // 
+            // enableToolStripMenuItem
+            // 
+            this.enableToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newManagementPackToolStripMenuItem1,
+            this.existingManagementPackToolStripMenuItem1});
+            this.enableToolStripMenuItem.Name = "enableToolStripMenuItem";
+            this.enableToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
+            this.enableToolStripMenuItem.Text = "Enable";
+            // 
             // newManagementPackToolStripMenuItem1
             // 
             this.newManagementPackToolStripMenuItem1.Name = "newManagementPackToolStripMenuItem1";
@@ -325,13 +330,6 @@ namespace MPViewer
             this.existingManagementPackToolStripMenuItem1.Size = new System.Drawing.Size(216, 22);
             this.existingManagementPackToolStripMenuItem1.Text = "Existing Management Pack";
             // 
-            // reloadToolStripMenuItem
-            // 
-            this.reloadToolStripMenuItem.Name = "reloadToolStripMenuItem";
-            this.reloadToolStripMenuItem.Size = new System.Drawing.Size(262, 22);
-            this.reloadToolStripMenuItem.Text = "Reload";
-            this.reloadToolStripMenuItem.Click += new System.EventHandler(this.reloadToolStripMenuItem_Click);
-            // 
             // MPViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -343,7 +341,7 @@ namespace MPViewer
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MPViewer";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Management Pack Viewer 2012";
+            this.Text = "Management Pack Viewer 2012 Reloaded (release 1)";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.MPViewer_Load);
             this.splitContainer.Panel1.ResumeLayout(false);
