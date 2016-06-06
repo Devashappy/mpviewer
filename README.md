@@ -6,7 +6,7 @@ This repository contains my own fork of the original MPviewer source ever so gen
 
 My goal is to continue to maintain this awesome tool and add features to further enhance it.
 
-Download
+[Download](https://github.com/JanVanMeirvenne/mpviewer/releases/download/R1/MPViewer.exe)
 
 
 ## Release 1
@@ -14,12 +14,12 @@ Download
 ### *New Features*
 * Compiled with the 2012 R2 SDK
 * Added the possibility to open multiple management packs at once
-** An additional table 'Management Packs' is added to the overview that shows all MP's currently loaded
-** Each MP item now has an additional column that shows the Management Packs where it resides in
+	* An additional table 'Management Packs' is added to the overview that shows all MP's currently loaded
+	* Each MP item now has an additional column that shows the Management Packs where it resides in
 * Added the possibility to load MP's from a management group instead of files
-** Use the file menu to connect to a management group
-** both single sign-on and credentials-based connections supported
-** Multiple MP selection also available in this mode!
+	* Use the file menu to connect to a management group
+	* both single sign-on and credentials-based connections supported
+	* Multiple MP selection also available in this mode!
 * Management Pack Module Types are now also shown and reported
 * OpenWith support: MPViewer can be made the default app for MP's. This allows you to open a MP-file by just double clicking on it!
 ### *Known Issues*
