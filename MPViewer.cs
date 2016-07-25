@@ -335,13 +335,21 @@ p.lastInCell	{
                     MP = new ManagementPack(path);
                     m_managementPack.Add(MP.Name, MP);
                     ProcessManagementPacks();
-                
-                } catch(Exception ex) { MessageBox.Show("Not a valid MP: " + path + "\r\n" + ex.Message); }
+                    saveToExcelToolStripMenuItem.Enabled = true;
+                    unsealManagementPackToolStripMenuItem.Enabled = true;
+                    saveToHTMLToolStripMenuItem.Enabled = true;
+            } catch(Exception ex) { MessageBox.Show("Not a valid MP: " + path + "\r\n" + ex.Message); }
         }
 
         //---------------------------------------------------------------------
         void MPViewer_Shown(object sender, EventArgs e)
         {
+            if(MPPath != null && MPList.Count > 0)
+            {
+                saveToExcelToolStripMenuItem.Enabled = true;
+                unsealManagementPackToolStripMenuItem.Enabled = true;
+                saveToHTMLToolStripMenuItem.Enabled = true;
+            }
           //  loadManagementPackToolStripMenuItem_Click(this, null); 
         }
 
@@ -563,6 +571,7 @@ p.lastInCell	{
             objectTypeTree.Nodes.Add("Resources");
             objectTypeTree.Nodes.Add("Dashboards and Widgets");
             objectTypeTree.Nodes.Add("Modules");
+            objectTypeTree.Nodes.Add("Monitor Types");
 
             objectTypeTree.Sort();
         }
@@ -576,12 +585,16 @@ p.lastInCell	{
         //---------------------------------------------------------------------
         private void MPViewer_Load(object sender, EventArgs e)
         {
-            ClearDetailsViews();      
-            
+            ClearDetailsViews();
+
             // initially, these two menu actions don't make sense - we'll re-enable them once an MP is loaded
-            unsealManagementPackToolStripMenuItem.Enabled = false;
-            saveToHTMLToolStripMenuItem.Enabled = false;
-            saveToExcelToolStripMenuItem.Enabled = false;
+            // JVM: unless we are using the OpenWith feature
+            if (MPPath != null && m_managementPack.Count > 1)
+            {
+                unsealManagementPackToolStripMenuItem.Enabled = false;
+                saveToHTMLToolStripMenuItem.Enabled = false;
+                saveToExcelToolStripMenuItem.Enabled = false;
+            }
         }
 
         //---------------------------------------------------------------------
@@ -766,7 +779,11 @@ p.lastInCell	{
             {
                 item.Tag = m_managementPack[info[0]].GetModuleType(info[1]);
             }
-             
+            else if (objectType == "Monitor Types")
+            {
+                item.Tag = m_managementPack[info[0]].GetUnitMonitorType(info[1]);
+            }
+
         }
 
         //---------------------------------------------------------------------
@@ -873,8 +890,8 @@ p.lastInCell	{
             {
                 return;
             }
-           
-                ManagementPackElement element;
+
+            ManagementPackElement element;
 
                 element = (ManagementPackElement)mpElementListView.SelectedItems[0].Tag;
 
@@ -1062,6 +1079,8 @@ p.lastInCell	{
 
             mpElementXml.Url = new Uri(tempFileName);
         }
+
+       
 
         //---------------------------------------------------------------------
         private string GetTempFileName()
@@ -1331,10 +1350,13 @@ p.lastInCell	{
     }
         private void ProcessManagementPacks()
         {
+
             
             ClearViews();
 
             PopulateObjectTypeTree();
+           
+           
 
 
           //  Application.UserAppDataRegistry.SetValue("MPFolder",Path.GetDirectoryName(m_openFileDialog.FileName));

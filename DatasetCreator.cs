@@ -142,8 +142,44 @@ namespace MPViewer
             CreateGenericTable(LinkedReports, "Linked Reports", false, true);
             m_mpLoadingProcess.DynamicInvoke(95, "Loading Reports");
             CreateGenericTable(Reports, "Reports", false, true);
+
+            m_mpLoadingProcess.DynamicInvoke(96, "Loading Monitor Types");
+            CreateMonitorTypesTable();
             
             m_mpLoadingProcess.DynamicInvoke(100, "Done!");
+        }
+
+        private void CreateMonitorTypesTable()
+        {
+            DataTable table = new DataTable("Monitor Types");
+
+            m_dataset.Tables.Add(table);
+
+            table.Columns.Add("Name", Type.GetType("System.String"));
+            table.Columns.Add("DisplayName", Type.GetType("System.String"));
+            table.Columns.Add("Description", Type.GetType("System.String"));
+            table.Columns.Add("States", Type.GetType("System.String"));
+            table.Columns.Add("Accessibility", Type.GetType("System.String"));
+            
+            table.Columns.Add("ObjectRef");
+            table.Columns.Add("Management Pack");
+            foreach (ManagementPack MP in m_managementPack)
+            {
+                foreach (ManagementPackUnitMonitorType monitortype in MP.GetUnitMonitorTypes())
+                {
+                    DataRow row = table.NewRow();
+                    row["Name"] = monitortype.Name;
+                    row["DisplayName"] = monitortype.DisplayName ?? "";
+                    row["Description"] = monitortype.Description ?? "";
+                    row["States"] = monitortype.MonitorTypeStateCollection.Count;
+                    row["Accessibility"] = monitortype.Accessibility.ToString();
+                    row["ObjectRef"] = MP.Name + ";" + monitortype.Name;
+                    row["Management Pack"] = MP.Name;
+                    table.Rows.Add(row);
+                }
+
+
+            }
         }
 
         //---------------------------------------------------------------------

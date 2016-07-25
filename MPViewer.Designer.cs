@@ -34,10 +34,10 @@ namespace MPViewer
             this.objectTypeTree = new System.Windows.Forms.TreeView();
             this.detailsSplitContainer = new System.Windows.Forms.SplitContainer();
             this.detailsTabControl = new System.Windows.Forms.TabControl();
-            this.knowledgeTab = new System.Windows.Forms.TabPage();
-            this.knowledgeBrowser = new System.Windows.Forms.WebBrowser();
             this.mpElementXmlTab = new System.Windows.Forms.TabPage();
             this.mpElementXml = new System.Windows.Forms.WebBrowser();
+            this.knowledgeTab = new System.Windows.Forms.TabPage();
+            this.knowledgeBrowser = new System.Windows.Forms.WebBrowser();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadManagementPackToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -57,8 +57,7 @@ namespace MPViewer
             this.enableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.existingManagementPackToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.mpElementListView = new Common.SortableListView();
-            this.mpElementListView.SelectedIndexChanged += mpElementListView_SelectedIndexChanged;
+            this.mpElementListView = new SortableListView();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
@@ -68,8 +67,8 @@ namespace MPViewer
             this.detailsSplitContainer.Panel2.SuspendLayout();
             this.detailsSplitContainer.SuspendLayout();
             this.detailsTabControl.SuspendLayout();
-            this.knowledgeTab.SuspendLayout();
             this.mpElementXmlTab.SuspendLayout();
+            this.knowledgeTab.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -140,27 +139,6 @@ namespace MPViewer
             this.detailsTabControl.Size = new System.Drawing.Size(572, 298);
             this.detailsTabControl.TabIndex = 0;
             // 
-            // knowledgeTab
-            // 
-            this.knowledgeTab.Controls.Add(this.knowledgeBrowser);
-            this.knowledgeTab.Location = new System.Drawing.Point(4, 22);
-            this.knowledgeTab.Name = "knowledgeTab";
-            this.knowledgeTab.Padding = new System.Windows.Forms.Padding(3);
-            this.knowledgeTab.Size = new System.Drawing.Size(564, 272);
-            this.knowledgeTab.TabIndex = 0;
-            this.knowledgeTab.Text = "Knowledge";
-            this.knowledgeTab.UseVisualStyleBackColor = true;
-            // 
-            // knowledgeBrowser
-            // 
-            this.knowledgeBrowser.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.knowledgeBrowser.IsWebBrowserContextMenuEnabled = false;
-            this.knowledgeBrowser.Location = new System.Drawing.Point(3, 3);
-            this.knowledgeBrowser.MinimumSize = new System.Drawing.Size(20, 20);
-            this.knowledgeBrowser.Name = "knowledgeBrowser";
-            this.knowledgeBrowser.Size = new System.Drawing.Size(558, 266);
-            this.knowledgeBrowser.TabIndex = 0;
-            // 
             // mpElementXmlTab
             // 
             this.mpElementXmlTab.Controls.Add(this.mpElementXml);
@@ -181,6 +159,27 @@ namespace MPViewer
             this.mpElementXml.Name = "mpElementXml";
             this.mpElementXml.Size = new System.Drawing.Size(564, 272);
             this.mpElementXml.TabIndex = 0;
+            // 
+            // knowledgeTab
+            // 
+            this.knowledgeTab.Controls.Add(this.knowledgeBrowser);
+            this.knowledgeTab.Location = new System.Drawing.Point(4, 22);
+            this.knowledgeTab.Name = "knowledgeTab";
+            this.knowledgeTab.Padding = new System.Windows.Forms.Padding(3);
+            this.knowledgeTab.Size = new System.Drawing.Size(564, 272);
+            this.knowledgeTab.TabIndex = 0;
+            this.knowledgeTab.Text = "Knowledge";
+            this.knowledgeTab.UseVisualStyleBackColor = true;
+            // 
+            // knowledgeBrowser
+            // 
+            this.knowledgeBrowser.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.knowledgeBrowser.IsWebBrowserContextMenuEnabled = false;
+            this.knowledgeBrowser.Location = new System.Drawing.Point(3, 3);
+            this.knowledgeBrowser.MinimumSize = new System.Drawing.Size(20, 20);
+            this.knowledgeBrowser.Name = "knowledgeBrowser";
+            this.knowledgeBrowser.Size = new System.Drawing.Size(558, 266);
+            this.knowledgeBrowser.TabIndex = 0;
             // 
             // menuStrip1
             // 
@@ -341,7 +340,7 @@ namespace MPViewer
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MPViewer";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Management Pack Viewer 2012 Reloaded (release 1)";
+            this.Text = "Management Pack Viewer 2012 Reloaded (release 2b)";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.Load += new System.EventHandler(this.MPViewer_Load);
             this.splitContainer.Panel1.ResumeLayout(false);
@@ -353,8 +352,8 @@ namespace MPViewer
             ((System.ComponentModel.ISupportInitialize)(this.detailsSplitContainer)).EndInit();
             this.detailsSplitContainer.ResumeLayout(false);
             this.detailsTabControl.ResumeLayout(false);
-            this.knowledgeTab.ResumeLayout(false);
             this.mpElementXmlTab.ResumeLayout(false);
+            this.knowledgeTab.ResumeLayout(false);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
