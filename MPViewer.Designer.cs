@@ -127,6 +127,7 @@ namespace MPViewer
             this.mpElementListView.TabIndex = 0;
             this.mpElementListView.UseCompatibleStateImageBehavior = false;
             this.mpElementListView.View = System.Windows.Forms.View.Details;
+            this.mpElementListView.SelectedIndexChanged += mpElementListView_SelectedIndexChanged;
             // 
             // detailsTabControl
             // 
